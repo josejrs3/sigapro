@@ -560,6 +560,15 @@
             </form>
             <p id="manager-task-feedback" class="mt-2 min-h-4 text-center text-[10px] font-bold text-emerald-600"></p>
         </section>
+        <section class="rounded-[2rem] border border-slate-100 bg-white p-4 shadow-sm">
+            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div class="flex-1">
+                    <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-400">Dias da semana</p>
+                    <div id="manager-overview-date-nav" class="grid grid-cols-4 gap-2 sm:grid-cols-7"></div>
+                </div>
+                <label class="block min-w-[11rem] text-[10px] font-black uppercase tracking-wider text-slate-400">Vendedor<select id="manager-overview-vendor-filter" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold outline-none"></select></label>
+            </div>
+        </section>
         <div id="manager-overview-list" class="space-y-3"></div>
     </section>
 
@@ -655,6 +664,31 @@
             'siga-vendas-loja': 'vendas_loja',
             'siga-conteudos': 'conteudos'
         };
+
+        const supabaseRetentionPolicy = {
+            tarefas: { days: 60, column: 'data' },
+            vendas: { days: 60, column: 'data_hora' },
+            atendimentos: { days: 60, column: 'data_hora' },
+            condicionais: { days: 60, column: 'created_at' },
+            metas: { days: 365, column: 'semana_fim' },
+            metas_mensais: { days: 365, column: 'mes_referencia' },
+            metas_semanais: { days: 365, column: 'semana_fim' },
+            vendas_loja: { days: 365, column: 'data' }
+        };
+
+        async function purgeExpiredSupabaseRecords() {
+            for (const [table, policy] of Object.entries(supabaseRetentionPolicy)) {
+                try {
+                    const cutoffDate = new Date();
+                    cutoffDate.setDate(cutoffDate.getDate() - policy.days);
+                    const cutoffValue = policy.column === 'data' || policy.column === 'mes_referencia' || policy.column === 'semana_fim' ? cutoffDate.toISOString().slice(0, 10) : cutoffDate.toISOString();
+                    const { error } = await sigaSupabase.from(table).delete().lt(policy.column, cutoffValue);
+                    if (error) console.warn(`Falha ao limpar registros expirados em ${table}:`, error.message);
+                } catch (error) {
+                    console.warn(`Erro ao tentar limpar registros expirados de ${table}:`, error);
+                }
+            }
+        }
 
         function databaseRowFromApp(table, item, scopedUserId = null) {
             const userId = item.userId || item.ownerId || scopedUserId || effectiveUserId();
@@ -777,6 +811,82 @@
                 }
             }));
             lastSupabaseHydration = Date.now();
+        }
+
+        function getStorageRetentionDays(storageKey) {
+            if (storageKey === 'siga-metas' || storageKey === 'siga-metas-mensais' || storageKey === 'siga-metas-semanais' || storageKey.startsWith('siga-vendas-loja')) return 365;
+            if (storageKey === 'siga-tarefas' || storageKey.startsWith('siga-tarefas::') || storageKey === 'siga-vendas' || storageKey.startsWith('siga-vendas::') || storageKey === 'siga-atendimentos' || storageKey.startsWith('siga-atendimentos::') || storageKey === 'siga-condicionais' || storageKey.startsWith('siga-condicionais::') || storageKey === 'siga-humor-registros') return 60;
+            return null;
+        }
+
+        function extractRecordDateKey(record) {
+            if (!record || typeof record !== 'object') return null;
+            if (typeof record.date === 'string' && record.date.length >= 8) return record.date.slice(0, 10);
+            if (typeof record.datetime === 'string' && record.datetime.length >= 10) return record.datetime.slice(0, 10);
+            if (typeof record.createdAt === 'string' && record.createdAt.length >= 10) return record.createdAt.slice(0, 10);
+            if (typeof record.weekStart === 'string' && record.weekStart.length >= 8) return record.weekStart.slice(0, 10);
+            if (typeof record.weekEnd === 'string' && record.weekEnd.length >= 8) return record.weekEnd.slice(0, 10);
+            if (typeof record.month === 'string' && /^\d{4}-\d{2}$/.test(record.month)) return `${record.month}-01`;
+            if (typeof record.mes_referencia === 'string' && record.mes_referencia.length >= 8) return record.mes_referencia.slice(0, 10);
+            if (typeof record.semana_inicio === 'string' && record.semana_inicio.length >= 8) return record.semana_inicio.slice(0, 10);
+            if (typeof record.semana_fim === 'string' && record.semana_fim.length >= 8) return record.semana_fim.slice(0, 10);
+            if (typeof record.data === 'string' && record.data.length >= 8) return record.data.slice(0, 10);
+            if (typeof record.data_hora === 'string' && record.data_hora.length >= 10) return record.data_hora.slice(0, 10);
+            return null;
+        }
+
+        function pruneListByRetention(list, maxAgeDays) {
+            if (!Array.isArray(list) || !Number.isFinite(maxAgeDays) || maxAgeDays <= 0) return list;
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - maxAgeDays);
+            const cutoffKey = getLocalDateKey(cutoff);
+            return list.filter(item => {
+                const recordDate = extractRecordDateKey(item);
+                if (!recordDate) return true;
+                return recordDate >= cutoffKey;
+            });
+        }
+
+        function pruneExpiredProjectData() {
+            const retentionKeys = [
+                'siga-tarefas', 'siga-vendas', 'siga-atendimentos', 'siga-condicionais', 'siga-metas',
+                'siga-metas-mensais', 'siga-metas-semanais', 'siga-vendas-loja', 'siga-humor-registros'
+            ];
+            const keys = [...new Set([...Object.keys(localStorage), ...retentionKeys])];
+            keys.forEach(storageKey => {
+                const maxAgeDays = getStorageRetentionDays(storageKey);
+                if (!maxAgeDays || !storageKey.startsWith('siga-') && !storageKey.startsWith('siga')) return;
+                try {
+                    const value = JSON.parse(localStorage.getItem(storageKey));
+                    if (!Array.isArray(value)) return;
+                    const previous = value;
+                    const filtered = pruneListByRetention(value, maxAgeDays);
+                    if (filtered.length !== previous.length) {
+                        localStorage.setItem(storageKey, JSON.stringify(filtered));
+                        const removedIds = previous.filter(item => !filtered.some(next => next.id === item.id)).map(item => item.id).filter(Boolean);
+                        if (removedIds.length) syncStoredList(storageKey, filtered, removedIds);
+                    }
+                } catch (error) {
+                    console.warn(`Falha ao limpar retenção em ${storageKey}:`, error);
+                }
+            });
+            Object.keys(localStorage).filter(key => key.startsWith('siga-') && key.includes('::')).forEach(storageKey => {
+                const maxAgeDays = getStorageRetentionDays(storageKey);
+                if (!maxAgeDays) return;
+                try {
+                    const value = JSON.parse(localStorage.getItem(storageKey));
+                    if (!Array.isArray(value)) return;
+                    const previous = value;
+                    const filtered = pruneListByRetention(value, maxAgeDays);
+                    if (filtered.length !== previous.length) {
+                        localStorage.setItem(storageKey, JSON.stringify(filtered));
+                        const removedIds = previous.filter(item => !filtered.some(next => next.id === item.id)).map(item => item.id).filter(Boolean);
+                        if (removedIds.length) syncStoredList(storageKey, filtered, removedIds);
+                    }
+                } catch (error) {
+                    console.warn(`Falha ao limpar retenção em ${storageKey}:`, error);
+                }
+            });
         }
 
         function readStoredList(key) {
@@ -1053,22 +1163,34 @@
             userSelect.value = selectedId;
         }
 
+        function toggleMoodCardForSession() {
+            const moodCard = document.getElementById('mood-card');
+            if (!moodCard) return;
+            const session = getSession();
+            const shouldHide = session?.type === 'user' && session.role === 'gerente';
+            moodCard.style.display = shouldHide ? 'none' : '';
+        }
+
         function startAppIfNeeded() {
             if (appStarted) { refreshAllAppViews(); return; }
             appStarted = true;
+            cleanupOldTasks();
             initTasks();
-            initMoodCard();
+            if (!(getSession()?.type === 'user' && getSession()?.role === 'gerente')) initMoodCard();
             bindManagerBar();
             renderGoalCard();
             renderDailyContent();
+            toggleMoodCardForSession();
             document.getElementById('app-logout').addEventListener('click', () => { clearSession(); location.href = location.pathname; });
-            if (!getMoodRecords()[getLocalDateKey()]) openRequiredMood();
+            if (!(getSession()?.type === 'user' && getSession()?.role === 'gerente') && !getMoodRecords()[getLocalDateKey()]) openRequiredMood();
         }
 
         function refreshAllAppViews() {
+            cleanupOldTasks();
             showPage('dashboard');
             renderDashboardSales();
-            refreshMoodCard();
+            if (!(getSession()?.type === 'user' && getSession()?.role === 'gerente')) refreshMoodCard();
+            toggleMoodCardForSession();
             renderGoalCard();
             renderDailyContent();
         }
@@ -1280,11 +1402,55 @@
             document.getElementById('manager-task-weekdays').innerHTML = weekdays.map(([value, label]) => `<label class="text-center text-[10px] font-bold text-slate-500"><input type="checkbox" value="${value}" data-manager-task-weekday class="peer sr-only"><span class="block cursor-pointer rounded-lg border border-slate-200 bg-white px-1 py-2 peer-checked:border-amber-400 peer-checked:bg-amber-50 peer-checked:text-amber-700">${label}</span></label>`).join('');
         }
 
+        function renderManagerOverviewDateNav() {
+            const nav = document.getElementById('manager-overview-date-nav');
+            if (!nav) return;
+            const today = new Date(`${getLocalDateKey()}T12:00:00`);
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const dates = Array.from({ length: 7 }, (_, index) => {
+                const date = new Date(weekStart);
+                date.setDate(weekStart.getDate() + index);
+                return date;
+            });
+            nav.innerHTML = dates.map(date => {
+                const key = getLocalDateKey(date);
+                const shortLabel = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(date).replace('.', '');
+                const isSelected = key === managerOverviewSelectedDate;
+                const isToday = key === getLocalDateKey();
+                return `<button type="button" data-manager-overview-date="${key}" class="rounded-xl border px-2 py-2 text-center text-[10px] font-black uppercase transition ${isSelected ? 'border-indigo-500 bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:border-indigo-300 hover:bg-indigo-50'}">
+                    <span class="block opacity-80">${isToday ? 'Hoje' : shortLabel}</span>
+                    <span class="mt-1 block text-sm font-black">${date.getDate()}</span>
+                </button>`;
+            }).join('');
+            nav.querySelectorAll('[data-manager-overview-date]').forEach(button => {
+                button.addEventListener('click', () => {
+                    managerOverviewSelectedDate = button.dataset.managerOverviewDate;
+                    renderManagerOverview();
+                });
+            });
+        }
+
+        function renderManagerVendorFilter() {
+            const select = document.getElementById('manager-overview-vendor-filter');
+            if (!select) return;
+            const session = getSession();
+            const vendors = getUsuarios().filter(item => item.lojaId === session?.lojaId && item.role === 'vendedor');
+            select.innerHTML = ['<option value="all">Todos</option>', ...vendors.map(vendor => `<option value="${vendor.id}">${escapeHtml(vendor.name)}</option>`)].join('');
+            select.value = managerOverviewVendorFilter || 'all';
+            select.onchange = event => {
+                managerOverviewVendorFilter = event.target.value;
+                renderManagerOverview();
+            };
+        }
+
         function createManagerRecurringTasks(userId, title, time, repeatDays) {
             const tasks = createRecurringTasks(title, time, getLocalDateKey(), repeatDays).map(task => ({ ...task, owner: 'manager' }));
+            if (!tasks.length) return;
             const key = `siga-tarefas::${userId}`;
             const current = readStoredList(key);
-            const updated = [...current, ...tasks];
+            const existingDates = new Set(current.filter(task => task.owner === 'manager' && task.title === title && task.time === time).map(task => task.date));
+            const updated = [...current, ...tasks.filter(task => !existingDates.has(task.date))];
             localStorage.setItem(key, JSON.stringify(updated));
             const session = getSession();
             const previousViewing = session.viewingUserId;
@@ -1299,7 +1465,16 @@
             const session = getSession();
             renderManagerTaskWeekdays();
             renderManagerTaskVendors();
-            const tasks = collectAllTasksForStore(session.lojaId);
+            renderManagerOverviewDateNav();
+            renderManagerVendorFilter();
+            const tasks = collectAllTasksForStore(session.lojaId)
+                .filter(task => {
+                    const taskDate = task.date || getLocalDateKey();
+                    if (taskDate !== managerOverviewSelectedDate) return false;
+                    if (managerOverviewVendorFilter !== 'all' && task.vendedorId !== managerOverviewVendorFilter) return false;
+                    return true;
+                })
+                .sort((first, second) => first.time.localeCompare(second.time) || first.vendedorNome.localeCompare(second.vendedorNome, 'pt-BR'));
             document.getElementById('manager-overview-list').innerHTML = tasks.length ? tasks.map(task => `
                 <article class="flex items-center gap-3 rounded-2xl border p-3 ${managerTaskStatusClasses(task)}">
                     <button type="button" data-manager-toggle-task="${task.id}" data-task-owner="${task.vendedorId}" aria-label="${task.completed ? 'Reabrir' : 'Concluir'} tarefa" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border-2 ${task.completed ? 'border-emerald-500 bg-emerald-500 text-white' : isTaskOverdueRaw(task, new Date()) ? 'border-red-400 bg-red-100 text-red-600' : 'border-amber-400 bg-amber-100 text-amber-600'}">${task.completed ? '<i data-lucide="check" class="w-4 h-4"></i>' : isTaskOverdueRaw(task, new Date()) ? '<i data-lucide="clock-alert" class="w-4 h-4"></i>' : ''}</button>
@@ -1318,7 +1493,7 @@
                         </div>
                     </div>
                 </article>
-            `).join('') : '<p class="rounded-2xl bg-white p-4 text-xs text-slate-400">Nenhuma tarefa registrada pela equipe.</p>';
+            `).join('') : '<p class="rounded-2xl bg-white p-4 text-xs text-slate-400">Nenhuma tarefa registrada para este dia.</p>';
             lucide.createIcons();
         }
 
@@ -1866,9 +2041,13 @@
         }
 
         async function bootstrapSupabase() {
+            pruneExpiredProjectData();
+            await purgeExpiredSupabaseRecords();
             const { data } = await sigaSupabase.auth.getSession();
             if (data.session && getSession()?.type === 'master') saveSession({ type: 'master' });
             await hydrateFromSupabase();
+            pruneExpiredProjectData();
+            await purgeExpiredSupabaseRecords();
             ensureDefaultMoodContents();
             if (getSession()?.type === 'user' && getSession()?.role === 'gerente' && location.hash === '#manager-goals') {
                 location.hash = 'app';
@@ -1890,7 +2069,28 @@
 
         function taskStorageKey() { return scopedKey('siga-tarefas'); }
 
+        function cleanupOldTasks() {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - 7);
+            const cutoffKey = getLocalDateKey(cutoffDate);
+            const keys = Object.keys(localStorage).filter(key => key.startsWith('siga-tarefas::'));
+            keys.forEach(key => {
+                try {
+                    const tasks = JSON.parse(localStorage.getItem(key)) || [];
+                    const filtered = Array.isArray(tasks) ? tasks.filter(task => {
+                        const taskDate = task.date || getLocalDateKey();
+                        return taskDate >= cutoffKey;
+                    }) : [];
+                    localStorage.setItem(key, JSON.stringify(filtered));
+                    if (Array.isArray(tasks)) syncStoredList(key, filtered, tasks.filter(task => !filtered.some(next => next.id === task.id)).map(task => task.id));
+                } catch (error) {
+                    console.warn('Erro ao limpar tarefas antigas:', error);
+                }
+            });
+        }
+
         function getTasks() {
+            cleanupOldTasks();
             try {
                 const savedTasks = JSON.parse(localStorage.getItem(taskStorageKey()));
                 return Array.isArray(savedTasks) ? savedTasks : [];
@@ -1916,10 +2116,13 @@
         function createRecurringTasks(title, time, startDate, repeatDays) {
             const seriesId = crypto.randomUUID();
             const tasks = [];
-            const cursor = new Date(`${startDate}T12:00:00`);
-            const endDate = new Date(cursor);
-            endDate.setFullYear(endDate.getFullYear() + 2);
-            for (; cursor <= endDate; cursor.setDate(cursor.getDate() + 1)) {
+            const start = new Date(`${startDate}T12:00:00`);
+            const weekStart = new Date(start);
+            weekStart.setDate(start.getDate() - start.getDay());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            const cursor = new Date(weekStart);
+            for (; cursor <= weekEnd; cursor.setDate(cursor.getDate() + 1)) {
                 if (!repeatDays.includes(cursor.getDay())) continue;
                 tasks.push({ id: crypto.randomUUID(), title, time, owner: currentTaskOwnerRole(), completed: false, observation: '', date: getLocalDateKey(cursor), seriesId, repeatDays });
             }
@@ -2040,6 +2243,8 @@
         }
 
         let currentSelectedDate = getLocalDateKey();
+        let managerOverviewSelectedDate = getLocalDateKey();
+        let managerOverviewVendorFilter = 'all';
 
         function showPage(pageName) {
             const dashboard = document.getElementById('dashboard-page');
@@ -3050,6 +3255,8 @@
         }
 
         function initMoodCard() {
+            const session = getSession();
+            if (session?.type === 'user' && session.role === 'gerente') return;
             refreshMoodCard();
             renderMoodOptions('required-mood-options', true);
             if (!getMoodRecords()[getLocalDateKey()]) openRequiredMood();
@@ -3066,6 +3273,8 @@
         }
 
         function openRequiredMood() {
+            const session = getSession();
+            if (session?.type === 'user' && session.role === 'gerente') return;
             document.getElementById('app-shell').classList.add('hidden');
             const modal = document.getElementById('mood-required-modal');
             modal.classList.remove('hidden');
