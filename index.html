@@ -2042,18 +2042,17 @@
 
         async function bootstrapSupabase() {
             pruneExpiredProjectData();
-            await purgeExpiredSupabaseRecords();
             const { data } = await sigaSupabase.auth.getSession();
             if (data.session && getSession()?.type === 'master') saveSession({ type: 'master' });
             await hydrateFromSupabase();
             pruneExpiredProjectData();
-            await purgeExpiredSupabaseRecords();
             ensureDefaultMoodContents();
             if (getSession()?.type === 'user' && getSession()?.role === 'gerente' && location.hash === '#manager-goals') {
                 location.hash = 'app';
                 return;
             }
             applyRoute();
+            purgeExpiredSupabaseRecords().catch(error => console.warn('Limpeza de retenção do Supabase indisponível:', error));
         }
         prepareNumericInputs();
         bindAuthForms();
@@ -2064,7 +2063,11 @@
                 if (getSession()?.type === 'user') refreshAllAppViews();
             });
         });
-        bootstrapSupabase();
+        bootstrapSupabase().catch(error => {
+            console.error('Falha ao carregar dados remotos:', error);
+            ensureDefaultMoodContents();
+            applyRoute();
+        });
         // ================= FIM AUTENTICAÇÃO E MULTI-LOJA =================
 
         function taskStorageKey() { return scopedKey('siga-tarefas'); }
