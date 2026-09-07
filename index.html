@@ -1889,21 +1889,13 @@
         // ================= FIM AUTENTICAÇÃO E MULTI-LOJA =================
 
         function taskStorageKey() { return scopedKey('siga-tarefas'); }
-        const defaultTasks = [
-            { id: 'manager-1', title: 'Reunião de alinhamento comercial', time: '09:00', owner: 'manager', completed: false, observation: '', date: '' },
-            { id: 'manager-2', title: 'Retornar orçamentos prioritários', time: '11:30', owner: 'manager', completed: false, observation: '', date: '' },
-            { id: 'manager-3', title: 'Atualizar follow-up dos clientes', time: '16:00', owner: 'manager', completed: false, observation: '', date: '' }
-        ];
 
         function getTasks() {
             try {
                 const savedTasks = JSON.parse(localStorage.getItem(taskStorageKey()));
-                if (Array.isArray(savedTasks) && savedTasks.length) return savedTasks;
-                const today = getLocalDateKey();
-                return defaultTasks.map(task => ({ ...task, date: task.date || today }));
+                return Array.isArray(savedTasks) ? savedTasks : [];
             } catch (error) {
-                const today = getLocalDateKey();
-                return defaultTasks.map(task => ({ ...task, date: task.date || today }));
+                return [];
             }
         }
 
@@ -2914,7 +2906,6 @@
         }
 
         function initTasks() {
-            if (!localStorage.getItem(taskStorageKey())) saveTasks(defaultTasks);
             renderTasks();
             bindTaskActions();
             initObservationEditor();
