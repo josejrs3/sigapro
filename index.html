@@ -53,6 +53,10 @@
         #manager-bar { overflow: hidden; }
         #manager-bar > div > div:last-child { min-width: 0; max-width: 100%; }
         #mobile-navigation button { min-width: 3.5rem; }
+        #desktop-navigation { display: none !important; }
+        @media (min-width: 768px) {
+            #desktop-navigation:not(.hidden) { display: block !important; }
+        }
         #mood-card { min-height: 11rem; }
         #mood-card .mood-option { min-height: 3.5rem; }
         #goal-markers button { max-width: 4.75rem; }
@@ -1127,6 +1131,10 @@
                 if (session?.type !== 'user') { location.hash = ''; return; }
                     if (hash === 'app' && session.role === 'gerente' && !session.viewingUserId) { location.hash = 'manager-report'; return; }
                 if ((hash === 'manager-overview' || hash === 'manager-goals') && session.role !== 'gerente') { location.hash = 'app'; return; }
+                if (hash !== 'app' && session.role === 'gerente' && session.viewingUserId) {
+                    session.viewingUserId = null;
+                    saveSession(session);
+                }
                 hideAllViews();
                 document.getElementById('app-shell').classList.remove('hidden');
                 startAppIfNeeded();
@@ -1215,7 +1223,7 @@
             const viewingVendor = vendors.find(vendor => vendor.id === session.viewingUserId);
             const inVendorPanel = Boolean(viewingVendor);
             document.getElementById('desktop-navigation').classList.toggle('hidden', !inVendorPanel);
-            document.getElementById('mobile-navigation').classList.toggle('hidden', !inVendorPanel && session.role !== 'gerente');
+            document.getElementById('mobile-navigation').classList.toggle('hidden', !inVendorPanel);
             document.getElementById('fab-button').classList.toggle('hidden', !inVendorPanel);
             document.getElementById('manager-bar-label').textContent = inVendorPanel ? `Painel de: ${escapeHtml(viewingVendor.name)}` : `Loja: ${escapeHtml(getLojas().find(store => store.id === session.lojaId)?.name || '')}`;
         }
