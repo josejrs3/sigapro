@@ -1156,7 +1156,9 @@
                 const marker = event.target.closest('[data-goal-tier]');
                 if (!marker) return;
                 const data = currentGoalData();
-                document.getElementById('meta-valor').textContent = money(data.goal[marker.dataset.goalTier]);
+                const selectedTarget = Number(data.goal[marker.dataset.goalTier] || 0);
+                document.getElementById('meta-valor').textContent = money(selectedTarget);
+                document.getElementById('falta-valor').textContent = money(Math.max(0, selectedTarget - data.total));
             });
             document.getElementById('manager-goals-page').addEventListener('click', async event => {
                 const editWeekly = event.target.closest('[data-edit-weekly-goal]');
@@ -1618,12 +1620,23 @@
             document.getElementById('goal-markers').innerHTML = tiers.filter(([key]) => values[key] > 0).map(([key, label, color]) => `<button type="button" data-goal-tier="${key}" class="absolute -translate-x-1/2 text-center" style="left:${Math.min(100, values[key] / max * 100)}%"><span class="mx-auto block h-2 w-0.5 bg-slate-300"></span><span class="mt-1 block whitespace-nowrap rounded-full px-1 text-[8px] font-black uppercase ${color} text-white">${label}</span></button>`).join('');
         }
 
+        function formatGoalPeriodDate(period, start, end) {
+            const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+            const shortDate = date => {
+                const [year, month, day] = date.split('-').map(Number);
+                return `${String(day).padStart(2, '0')} ${months[month - 1].slice(0, 3)}`;
+            };
+            if (period === 'dia') return shortDate(start);
+            if (period === 'mes') return months[Number(start.slice(5, 7)) - 1];
+            return `${shortDate(start)} - ${shortDate(end)}`;
+        }
+
         function renderGoalCard() {
             const data = currentGoalData();
             const goal = data.goal;
             const percent = Math.min(100, data.total / Math.max(1, Number(goal.diamond || 0)) * 100);
             document.getElementById('period-title').textContent = window.activeGoalPeriod === 'dia' ? 'Meta Diária' : window.activeGoalPeriod === 'mes' ? 'Meta Mensal' : 'Meta Semanal';
-            document.getElementById('period-date').textContent = `${data.start} até ${data.end}`;
+            document.getElementById('period-date').textContent = formatGoalPeriodDate(window.activeGoalPeriod, data.start, data.end);
             document.getElementById('total-vendas').textContent = money(data.total);
             document.getElementById('meta-valor').textContent = money(data.target);
             document.getElementById('falta-valor').textContent = money(Math.max(0, data.target - data.total));
