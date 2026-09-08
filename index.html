@@ -152,6 +152,7 @@
             <div class="flex rounded-2xl bg-slate-100 p-1">
                 <button type="button" id="master-stores-tab" class="flex-1 rounded-xl bg-white px-4 py-2.5 text-xs font-black text-indigo-600 shadow-sm">Lojas e acessos</button>
                 <button type="button" id="master-content-tab" class="flex-1 rounded-xl px-4 py-2.5 text-xs font-black text-slate-500">Frases e dicas</button>
+                <button type="button" id="master-products-tab" class="flex-1 rounded-xl px-4 py-2.5 text-xs font-black text-slate-500">Produtos</button>
             </div>
             <div id="master-stores-view" class="space-y-6">
             <section class="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
@@ -174,6 +175,17 @@
                     <div class="flex justify-end gap-2 sm:col-span-2"><button type="button" id="cancel-content-edit" class="hidden rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500">Cancelar</button><button type="submit" class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white">Salvar conteúdo</button></div>
                 </form>
                 <div class="mt-6 grid gap-4 md:grid-cols-2"><div><h3 class="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Frases</h3><div id="phrase-list" class="space-y-2"></div></div><div><h3 class="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Dicas de venda</h3><div id="tip-list" class="space-y-2"></div></div></div>
+            </section>
+
+            <section id="master-products-view" class="hidden rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+                <div class="mb-4"><h2 class="text-lg font-black text-slate-800">Produtos</h2><p class="mt-1 text-xs text-slate-400">Cadastre os produtos usados nas vendas e atendimentos.</p></div>
+                <form id="product-form" class="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+                    <input type="hidden" id="product-editing-id">
+                    <input id="product-name-input" required maxlength="100" placeholder="Nome do produto" class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400">
+                    <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-[10px] font-black uppercase text-slate-500"><input id="product-gender-input" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600"> Masculino/feminino</label>
+                    <div class="flex gap-2"><button type="button" id="cancel-product-edit" class="hidden rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500">Cancelar</button><button type="submit" class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white">Salvar produto</button></div>
+                </form>
+                <div id="product-list" class="mt-5 grid gap-2 sm:grid-cols-2"></div>
             </section>
 
             <section id="loja-team-section" class="hidden rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
@@ -389,6 +401,11 @@
             <div id="dashboard-service-summary" class="grid gap-2 md:grid-cols-3"></div>
         </section>
 
+        <section id="seller-product-analytics" class="rounded-[2rem] border border-orange-100 bg-white p-6 shadow-sm">
+            <div class="mb-4 flex items-start justify-between gap-3"><div><h3 class="text-sm font-black uppercase tracking-wider text-slate-800">Inteligência de produtos</h3><p class="mt-1 text-[10px] font-semibold text-slate-400">Mapa de perdas dos seus atendimentos nesta semana</p></div><i data-lucide="flame" class="h-5 w-5 text-orange-500"></i></div>
+            <div id="seller-product-analytics-content" class="grid gap-4 md:grid-cols-2"></div>
+        </section>
+
         <section class="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
             <div class="mb-4 flex items-center justify-between"><h3 id="dashboard-conditional-title" role="button" tabindex="0" class="flex cursor-pointer items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-800"><i data-lucide="rotate-ccw" class="h-4 w-4 text-indigo-500"></i> Condicionais em aberto</h3><button type="button" id="open-conditional-from-dashboard" class="text-[10px] font-black uppercase tracking-wider text-indigo-500">Ver detalhes</button></div>
             <div id="dashboard-conditional-summary" class="grid gap-2 md:grid-cols-3"></div>
@@ -592,6 +609,7 @@
             </div>
         </details>
         <div class="grid gap-3 md:grid-cols-3"><div class="rounded-2xl bg-indigo-600 p-5 text-white"><p class="text-[10px] font-black uppercase">Vendas equipe</p><p id="manager-report-total" class="mt-1 text-3xl font-black">R$ 0,00</p></div><div class="rounded-2xl bg-emerald-500 p-5 text-white"><p class="text-[10px] font-black uppercase">Quantidade</p><p id="manager-report-count" class="mt-1 text-3xl font-black">0</p></div><div class="rounded-2xl bg-amber-400 p-5 text-white"><p class="text-[10px] font-black uppercase">Meta mensal loja</p><p id="manager-store-goal-total" class="mt-1 text-3xl font-black">R$ 0,00</p></div></div>
+        <section id="manager-product-analytics" class="rounded-[2rem] border border-orange-100 bg-white p-5 shadow-sm"><div class="mb-4 flex items-start justify-between gap-3"><div><h3 class="text-sm font-black uppercase tracking-wider text-slate-800">Mapa de perdas da equipe</h3><p class="mt-1 text-[10px] font-semibold text-slate-400">Motivos e produtos mais citados pelos vendedores</p></div><i data-lucide="flame" class="h-5 w-5 text-orange-500"></i></div><div id="manager-product-analytics-content" class="grid gap-4 md:grid-cols-2"></div></section>
         <section class="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm"><h3 class="mb-3 text-sm font-black uppercase tracking-wider text-slate-800">Vendas por vendedor</h3><div id="manager-report-list" class="space-y-2"></div></section>
         <section class="rounded-[2rem] border border-emerald-100 bg-white p-5 shadow-sm"><h3 class="mb-3 text-sm font-black tracking-wider text-slate-800">Venda da loja para meta mensal</h3><form id="manager-store-sale-form" class="grid gap-3 md:grid-cols-4"><input id="manager-store-sale-client" required placeholder="Nome/descrição" class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"><input id="manager-store-sale-value" required inputmode="decimal" data-money-input placeholder="R$ 0,00" class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"><input id="manager-store-sale-date" required type="date" class="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"><button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-black text-white">Lançar venda da loja</button></form><div id="manager-store-sales-list" class="mt-4 space-y-2"></div></section>
     </section>
@@ -673,7 +691,8 @@
             'siga-metas-mensais': 'metas_mensais',
             'siga-metas-semanais': 'metas_semanais',
             'siga-vendas-loja': 'vendas_loja',
-            'siga-conteudos': 'conteudos'
+            'siga-conteudos': 'conteudos',
+            'siga-produtos': 'produtos'
         };
 
         const supabaseRetentionPolicy = {
@@ -712,6 +731,7 @@
             if (table === 'metas_mensais') return { id: item.id, loja_id: item.lojaId, mes_referencia: `${item.month}-01`, valor_total: item.total };
             if (table === 'metas_semanais') return { id: item.id, loja_id: item.lojaId, meta_mensal_id: item.monthlyGoalId, nome: item.name, semana_inicio: item.weekStart, semana_fim: item.weekEnd, valor_total: item.total, distribuicao: item.distributions || [] };
             if (table === 'vendas_loja') return { id: item.id, loja_id: item.lojaId || getSession()?.lojaId || null, descricao: item.client || '', valor: Number(item.value || 0), data: item.date };
+            if (table === 'produtos') return { id: item.id, nome: item.name, aceita_genero: item.gender === true, ativo: item.active !== false };
             return item;
         }
 
@@ -725,7 +745,33 @@
             if (table === 'metas_mensais') return { ...row, lojaId: row.loja_id, month: String(row.mes_referencia || '').slice(0, 7), total: Number(row.valor_total || 0) };
             if (table === 'metas_semanais') return { ...row, lojaId: row.loja_id, monthlyGoalId: row.meta_mensal_id, name: row.nome, weekStart: row.semana_inicio, weekEnd: row.semana_fim, total: Number(row.valor_total || 0), distributions: row.distribuicao || [] };
             if (table === 'vendas_loja') return { ...row, lojaId: row.loja_id, client: row.descricao, value: Number(row.valor || 0), date: row.data, datetime: `${row.data}T12:00:00`, storeSale: true };
+            if (table === 'produtos') return { ...row, name: row.nome ?? row.name, gender: row.aceita_genero ?? row.gender ?? false, active: row.ativo !== false };
             return row;
+        }
+
+        function publicProfileFromRow(row) {
+            const { password, senha, password_hash, ...profile } = row;
+            return { ...profile, lojaId: row.loja_id ?? row.lojaId, name: row.nome ?? row.name, role: row.cargo ?? row.funcao ?? row.role, username: row.username ?? row.login, slug: row.slug, fullSlug: row.full_slug ?? row.link_slug ?? row.fullSlug, createdAt: row.created_at ?? row.criado_em ?? row.createdAt };
+        }
+
+        async function saveProfileCredentials(profile, password = '') {
+            const { error } = await sigaSupabase.rpc('admin_save_profile', {
+                p_id: profile.id,
+                p_loja_id: profile.lojaId,
+                p_nome: profile.name,
+                p_cargo: profile.role,
+                p_username: profile.username,
+                p_slug: profile.slug,
+                p_full_slug: profile.fullSlug,
+                p_password: password || null
+            });
+            if (error) throw error;
+        }
+
+        async function verifyProfileCredentials(profileId, password) {
+            const { data, error } = await sigaSupabase.rpc('verify_profile_password', { p_profile_id: profileId, p_password: password });
+            if (error || !data?.length) return null;
+            return publicProfileFromRow(data[0]);
         }
 
         const pendingSupabaseSyncs = new Map();
@@ -753,7 +799,7 @@
             }
             const scopedUserId = storageKey.match(/::([^:]+)$/)?.[1] || null;
             const syncableList = table === 'tarefas' ? pending.list.filter(item => isSupabaseUuid(item.id)) : pending.list;
-            const rows = syncableList.map(item => table === 'lojas' ? { id: item.id, nome: item.name, slug: item.slug, configuracoes: item.configuracoes || {}, created_at: item.createdAt } : table === 'perfis' ? { id: item.id, loja_id: item.lojaId, nome: item.name, cargo: item.role, username: item.username, password: item.password, slug: item.slug, full_slug: item.fullSlug, created_at: item.createdAt } : databaseRowFromApp(table, item, scopedUserId));
+            const rows = syncableList.map(item => table === 'lojas' ? { id: item.id, nome: item.name, slug: item.slug, configuracoes: item.configuracoes || {}, created_at: item.createdAt } : table === 'perfis' ? { id: item.id, loja_id: item.lojaId, nome: item.name, cargo: item.role, username: item.username, slug: item.slug, full_slug: item.fullSlug, created_at: item.createdAt } : databaseRowFromApp(table, item, scopedUserId));
             if (!rows.length) return;
             const { error } = await sigaSupabase.from(table).upsert(rows);
             if (error) {
@@ -775,6 +821,7 @@
             if (!session) {
                 addRequest('lojas', lojasStorageKey);
                 addRequest('perfis', usuariosStorageKey);
+                addRequest('produtos', 'siga-produtos');
             } else if (session.type === 'master') {
                 addRequest('lojas', lojasStorageKey);
                 addRequest('perfis', usuariosStorageKey);
@@ -782,6 +829,7 @@
             } else {
                 addRequest('lojas', lojasStorageKey, 'id', session.lojaId);
                 addRequest('perfis', usuariosStorageKey, 'loja_id', session.lojaId);
+                addRequest('produtos', 'siga-produtos');
                 const userId = effectiveUserId();
                 const managerStoreView = session.role === 'gerente' && !session.viewingUserId;
                 const ownerColumn = managerStoreView ? 'loja_id' : null;
@@ -797,11 +845,11 @@
                 addRequest('conteudos', 'siga-conteudos');
             }
             await Promise.all(requests.map(async ({ table, storageKey, column, value }) => {
-                let query = sigaSupabase.from(table).select('*');
+                let query = table === 'perfis' ? sigaSupabase.from(table).select('id,loja_id,nome,cargo,username,slug,full_slug,created_at') : sigaSupabase.from(table).select('*');
                 if (column && value) query = query.eq(column, value);
                 const { data, error } = await query;
                 if (error || !data) return;
-                const list = data.map(row => table === 'lojas' ? { ...row, name: row.nome ?? row.name, createdAt: row.criado_em ?? row.created_at ?? row.createdAt } : table === 'perfis' ? { ...row, lojaId: row.loja_id ?? row.lojaId, name: row.nome ?? row.name, role: row.cargo ?? row.funcao ?? row.role, username: row.username ?? row.login, password: row.password ?? row.senha, slug: row.slug, fullSlug: row.full_slug ?? row.link_slug ?? row.fullSlug, createdAt: row.created_at ?? row.criado_em ?? row.createdAt } : databaseRowToApp(table, row));
+                const list = data.map(row => table === 'lojas' ? { ...row, name: row.nome ?? row.name, createdAt: row.criado_em ?? row.created_at ?? row.createdAt } : table === 'perfis' ? publicProfileFromRow(row) : databaseRowToApp(table, row));
                 if (!list.length && table === 'tarefas') {
                     if (session.role === 'gerente' && !session.viewingUserId) getUsuarios().filter(user => user.lojaId === session.lojaId).forEach(user => writeStoredList(`${storageKey}::${user.id}`, []));
                     else if (value) writeStoredList(`${storageKey}::${value}`, []);
@@ -1013,7 +1061,13 @@
         function saveLojas(list) { const previous = getLojas(); localStorage.setItem(lojasStorageKey, JSON.stringify(list)); syncStoredList(lojasStorageKey, list, previous.filter(item => !list.some(next => next.id === item.id)).map(item => item.id)); }
 
         function getUsuarios() {
-            try { const saved = JSON.parse(localStorage.getItem(usuariosStorageKey)); return Array.isArray(saved) ? saved : []; } catch (error) { return []; }
+            try {
+                const saved = JSON.parse(localStorage.getItem(usuariosStorageKey));
+                if (!Array.isArray(saved)) return [];
+                const sanitized = saved.map(({ password, senha, passwordHash, ...profile }) => profile);
+                if (JSON.stringify(saved) !== JSON.stringify(sanitized)) localStorage.setItem(usuariosStorageKey, JSON.stringify(sanitized));
+                return sanitized;
+            } catch (error) { return []; }
         }
         function saveUsuarios(list) { const previous = getUsuarios(); localStorage.setItem(usuariosStorageKey, JSON.stringify(list)); syncStoredList(usuariosStorageKey, list, previous.filter(item => !list.some(next => next.id === item.id)).map(item => item.id)); }
 
@@ -1195,6 +1249,7 @@
             bindManagerBar();
             renderGoalCard();
             renderDailyContent();
+            renderProductAnalytics();
             toggleMoodCardForSession();
             document.getElementById('app-logout').addEventListener('click', () => { clearSession(); location.href = location.pathname; });
             if (!(getSession()?.type === 'user' && getSession()?.role === 'gerente') && !getMoodRecords()[getLocalDateKey()]) openRequiredMood();
@@ -1208,6 +1263,7 @@
             toggleMoodCardForSession();
             renderGoalCard();
             renderDailyContent();
+            renderProductAnalytics();
         }
 
         function currentTaskOwnerRole() {
@@ -1632,6 +1688,7 @@
             document.getElementById('manager-store-goal-total').textContent = money(storeGoals.reduce((sum, goal) => sum + Number(goal.total || 0), 0));
             document.getElementById('manager-report-list').innerHTML = Object.keys(grouped).length ? Object.entries(grouped).map(([name, value]) => `<div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"><span class="text-xs font-bold text-slate-700">${escapeHtml(name)}</span><strong class="text-sm font-black text-indigo-600">${money(value)}</strong></div>`).join('') : '<p class="text-xs text-slate-400">Nenhuma venda no período.</p>';
             renderManagerStoreSales();
+            renderProductAnalytics();
         }
 
         function getManagerStoreSales() {
@@ -1881,6 +1938,33 @@
             lucide.createIcons();
         }
 
+        const legacyProductNames = ['Tênis casual', 'Tênis esportivo', 'Sapatênis', 'Sandália', 'Rasteirinha', 'Cintos', 'Camisa', 'Bermuda', 'Bolsa', 'Mala de viagem', 'Acessório esportivo', 'Acessório de moda', 'Chuteira', 'Bola', 'Tops', 'Maiô', 'Meia', 'Carteira', 'Outros'];
+        const legacyGenderProductNames = new Set(['Tênis casual', 'Tênis esportivo', 'Sapatênis', 'Sandália', 'Rasteirinha', 'Cintos', 'Camisa', 'Bermuda', 'Bolsa', 'Mala de viagem', 'Acessório de moda', 'Chuteira', 'Tops', 'Maiô', 'Meia', 'Carteira']);
+
+        function getProducts() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('siga-produtos'));
+                if (Array.isArray(saved)) return saved.filter(item => item.active !== false);
+            } catch (error) { }
+            const migrated = legacyProductNames.map(name => ({ id: crypto.randomUUID(), name, gender: legacyGenderProductNames.has(name), active: true }));
+            localStorage.setItem('siga-produtos', JSON.stringify(migrated));
+            return migrated;
+        }
+
+        function saveProducts(list) {
+            const previous = getProducts();
+            localStorage.setItem('siga-produtos', JSON.stringify(list));
+            syncStoredList('siga-produtos', list, previous.filter(item => !list.some(next => next.id === item.id)).map(item => item.id));
+        }
+
+        function renderProductAdminList() {
+            const target = document.getElementById('product-list');
+            if (!target) return;
+            const products = getProducts().sort((first, second) => first.name.localeCompare(second.name, 'pt-BR'));
+            target.innerHTML = products.length ? products.map(product => `<article class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3"><div class="min-w-0"><p class="truncate text-xs font-black text-slate-700">${escapeHtml(product.name)}</p><p class="mt-1 text-[10px] font-semibold text-slate-400">${product.gender ? 'Masculino ou feminino' : 'Sem variação de gênero'}</p></div><div class="flex shrink-0 gap-1"><button type="button" data-edit-product="${product.id}" aria-label="Editar produto" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-indigo-600"><i data-lucide="pencil" class="h-4 w-4"></i></button><button type="button" data-delete-product="${product.id}" aria-label="Excluir produto" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-red-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button></div></article>`).join('') : '<p class="text-xs text-slate-400">Nenhum produto cadastrado.</p>';
+            lucide.createIcons();
+        }
+
         function renderLojaTeam(lojaId) {
             selectedLojaId = lojaId;
             const loja = getLojas().find(item => item.id === lojaId);
@@ -1906,6 +1990,7 @@
         function bindAuthForms() {
             document.getElementById('master-stores-tab').addEventListener('click', () => switchMasterTab('stores'));
             document.getElementById('master-content-tab').addEventListener('click', () => switchMasterTab('content'));
+            document.getElementById('master-products-tab').addEventListener('click', () => switchMasterTab('products'));
             document.getElementById('toggle-master-password').addEventListener('click', event => {
                 const input = document.getElementById('master-password-input');
                 const visible = input.type === 'text';
@@ -1937,11 +2022,16 @@
                 event.preventDefault();
                 const usuario = getUsuarios().find(item => item.id === document.getElementById('pessoa-user-input').value && item.lojaId === document.getElementById('pessoa-store-input').value);
                 const password = document.getElementById('pessoa-password-input').value;
-                if (!usuario || !/^\d+$/.test(password) || String(usuario.password) !== password) {
+                if (!usuario || !/^\d+$/.test(password)) {
                     document.getElementById('pessoa-login-error').textContent = 'Login ou senha inválidos.';
                     return;
                 }
-                saveSession({ type: 'user', userId: usuario.id, role: usuario.role, lojaId: usuario.lojaId, name: usuario.name, viewingUserId: null });
+                const verifiedProfile = await verifyProfileCredentials(usuario.id, password);
+                if (!verifiedProfile) {
+                    document.getElementById('pessoa-login-error').textContent = 'Login ou senha inválidos.';
+                    return;
+                }
+                saveSession({ type: 'user', userId: verifiedProfile.id, role: verifiedProfile.role, lojaId: verifiedProfile.lojaId, name: verifiedProfile.name, viewingUserId: null });
                 await hydrateFromSupabase();
                 location.hash = 'app';
             });
@@ -1967,6 +2057,25 @@
                 document.getElementById('usuario-form').reset();
                 document.getElementById('usuario-editing-id').value = '';
                 document.getElementById('cancel-usuario-edit').classList.add('hidden');
+            });
+
+            document.getElementById('cancel-product-edit').addEventListener('click', () => {
+                document.getElementById('product-form').reset();
+                document.getElementById('product-editing-id').value = '';
+                document.getElementById('cancel-product-edit').classList.add('hidden');
+            });
+
+            document.getElementById('product-form').addEventListener('submit', event => {
+                event.preventDefault();
+                const editingId = document.getElementById('product-editing-id').value;
+                const product = { id: editingId || crypto.randomUUID(), name: document.getElementById('product-name-input').value.trim(), gender: document.getElementById('product-gender-input').checked, active: true };
+                if (!product.name) return;
+                const products = getProducts();
+                saveProducts(editingId ? products.map(item => item.id === editingId ? product : item) : [...products, product]);
+                event.target.reset();
+                document.getElementById('product-editing-id').value = '';
+                document.getElementById('cancel-product-edit').classList.add('hidden');
+                renderProductAdminList();
             });
 
             document.getElementById('usuario-form').addEventListener('submit', event => {
@@ -2037,6 +2146,24 @@
                     });
                     return;
                 }
+
+                const editProductButton = event.target.closest('[data-edit-product]');
+                if (editProductButton) {
+                    const product = getProducts().find(item => item.id === editProductButton.dataset.editProduct);
+                    if (!product) return;
+                    document.getElementById('product-editing-id').value = product.id;
+                    document.getElementById('product-name-input').value = product.name;
+                    document.getElementById('product-gender-input').checked = product.gender === true;
+                    document.getElementById('cancel-product-edit').classList.remove('hidden');
+                    return;
+                }
+
+                const deleteProductButton = event.target.closest('[data-delete-product]');
+                if (deleteProductButton) {
+                    if (!(await siteConfirm('Excluir este produto? Os registros antigos serão preservados.'))) return;
+                    saveProducts(getProducts().filter(item => item.id !== deleteProductButton.dataset.deleteProduct));
+                    renderProductAdminList();
+                }
             });
 
             document.getElementById('master-logout').addEventListener('click', () => { clearSession(); location.href = location.pathname; });
@@ -2061,13 +2188,20 @@
         function switchMasterTab(tab) {
             const storesTab = document.getElementById('master-stores-tab');
             const contentTab = document.getElementById('master-content-tab');
+            const productsTab = document.getElementById('master-products-tab');
             const storesView = document.getElementById('master-stores-view');
             const contentView = document.getElementById('master-content-view');
+            const productsView = document.getElementById('master-products-view');
             const showingStores = tab === 'stores';
-            contentView.classList.toggle('hidden', showingStores);
-            storesView.querySelectorAll(':scope > section:not(#master-content-view)').forEach(section => section.classList.toggle('hidden', !showingStores));
+            const showingContent = tab === 'content';
+            const showingProducts = tab === 'products';
+            contentView.classList.toggle('hidden', !showingContent);
+            productsView.classList.toggle('hidden', !showingProducts);
+            storesView.querySelectorAll(':scope > section:not(#master-content-view):not(#master-products-view)').forEach(section => section.classList.toggle('hidden', !showingStores));
             storesTab.className = showingStores ? 'flex-1 rounded-xl bg-white px-4 py-2.5 text-xs font-black text-indigo-600 shadow-sm' : 'flex-1 rounded-xl px-4 py-2.5 text-xs font-black text-slate-500';
-            contentTab.className = showingStores ? 'flex-1 rounded-xl px-4 py-2.5 text-xs font-black text-slate-500' : 'flex-1 rounded-xl bg-white px-4 py-2.5 text-xs font-black text-indigo-600 shadow-sm';
+            contentTab.className = !showingStores && !showingProducts ? 'flex-1 rounded-xl bg-white px-4 py-2.5 text-xs font-black text-indigo-600 shadow-sm' : 'flex-1 rounded-xl px-4 py-2.5 text-xs font-black text-slate-500';
+            productsTab.className = showingProducts ? 'flex-1 rounded-xl bg-white px-4 py-2.5 text-xs font-black text-indigo-600 shadow-sm' : 'flex-1 rounded-xl px-4 py-2.5 text-xs font-black text-slate-500';
+            if (showingProducts) renderProductAdminList();
         }
 
         async function bootstrapSupabase() {
@@ -2408,8 +2542,8 @@
         }
 
         function salesStorageKey() { return scopedKey('siga-vendas'); }
-        const saleProducts = ['Tênis casual', 'Tênis esportivo', 'Sapatênis', 'Sandália', 'Rasteirinha', 'Cintos', 'Camisa', 'Bermuda', 'Bolsa', 'Mala de viagem', 'Acessório esportivo', 'Acessório de moda', 'Chuteira', 'Bola', 'Tops', 'Maiô', 'Meia', 'Carteira', 'Outros'];
-        const productsWithGender = new Set(['Tênis casual', 'Tênis esportivo', 'Sapatênis', 'Sandália', 'Rasteirinha', 'Cintos', 'Camisa', 'Bermuda', 'Bolsa', 'Mala de viagem', 'Acessório de moda', 'Chuteira', 'Tops', 'Maiô', 'Meia', 'Carteira']);
+        function saleProducts() { return getProducts().map(product => product.name); }
+        function productsWithGender() { return new Set(getProducts().filter(product => product.gender).map(product => product.name)); }
         let salesPeriod = 'day';
         let salesSelectedDate = getLocalDateKey();
         let salesSelectedMonth = salesSelectedDate.slice(0, 7);
@@ -2490,12 +2624,13 @@
         }
 
         function renderProductOptionsInto(targetId, selectedProducts = []) {
-            const productList = [...saleProducts].sort((first, second) => first === 'Outros' ? 1 : second === 'Outros' ? -1 : first.localeCompare(second, 'pt-BR'));
+            const productList = [...saleProducts()].sort((first, second) => first === 'Outros' ? 1 : second === 'Outros' ? -1 : first.localeCompare(second, 'pt-BR'));
+            const genderProducts = productsWithGender();
             const target = document.getElementById(targetId);
             target.innerHTML = productList.map(product => {
                 const selected = selectedProducts.find(item => (item.name || item) === product);
                 const gender = selected?.gender || '';
-                return `<div data-sale-product="${escapeHtml(product)}" class="sale-product-card rounded-xl border p-2 ${selected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'}"><button type="button" class="w-full text-left text-[11px] font-bold text-slate-600">${product}</button>${productsWithGender.has(product) && selected ? `<select data-sale-gender="${escapeHtml(product)}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-600"><option value="">Sem gênero</option><option ${gender === 'Masculino' ? 'selected' : ''}>Masculino</option><option ${gender === 'Feminino' ? 'selected' : ''}>Feminino</option></select>` : ''}</div>`;
+                return `<div data-sale-product="${escapeHtml(product)}" class="sale-product-card rounded-xl border p-2 ${selected ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 bg-white'}"><button type="button" class="w-full text-left text-[11px] font-bold text-slate-600">${escapeHtml(product)}</button>${genderProducts.has(product) && selected ? `<select data-sale-gender="${escapeHtml(product)}" class="mt-2 w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-600"><option value="">Sem gênero</option><option ${gender === 'Masculino' ? 'selected' : ''}>Masculino</option><option ${gender === 'Feminino' ? 'selected' : ''}>Feminino</option></select>` : ''}</div>`;
             }).join('');
             const toggleId = `${targetId}-expand`;
             let toggle = document.getElementById(toggleId);
@@ -2558,6 +2693,46 @@
         function renderDashboardServices() {
             const services = servicesInPeriod().sort((first, second) => second.datetime.localeCompare(first.datetime)).slice(0, 3);
             document.getElementById('dashboard-service-summary').innerHTML = services.length ? services.map(item => `<div class="rounded-xl bg-slate-50 p-3"><div class="flex items-center justify-between gap-2"><span class="truncate text-xs font-bold text-slate-700">${escapeHtml(item.client || 'Cliente não informado')}</span><span class="text-[10px] font-black text-indigo-600">${escapeHtml(item.outcomeLabel)}</span></div><p class="mt-1 text-[10px] text-slate-400">${new Date(item.datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}${item.notes ? ` · ${escapeHtml(item.notes)}` : ''}</p></div>`).join('') : '<p class="text-xs text-slate-400">Nenhum atendimento registrado hoje.</p>';
+        }
+
+        function analyticsRecordsForCurrentScope() {
+            const session = getSession();
+            if (session?.role === 'gerente' && !session.viewingUserId) {
+                return getUsuarios().filter(user => user.lojaId === session.lojaId).flatMap(user => readStoredList(`siga-atendimentos::${user.id}`));
+            }
+            return getServices();
+        }
+
+        function analyticsLastWeekRecords() {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - 6);
+            const cutoffKey = getLocalDateKey(cutoff);
+            return analyticsRecordsForCurrentScope().filter(item => String(item.date || item.datetime || '').slice(0, 10) >= cutoffKey && item.outcome !== 'converted');
+        }
+
+        function renderLossHeatmap(targetId, records) {
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            if (!records.length) { target.innerHTML = '<p class="text-xs text-slate-400">Ainda não há perdas registradas nesta semana.</p>'; return; }
+            const reasons = {};
+            const details = {};
+            records.forEach(item => {
+                const reason = item.outcomeLabel || 'Outro motivo';
+                reasons[reason] = (reasons[reason] || 0) + 1;
+                const detail = item.demand?.trim() || (item.shownProducts || []).map(product => product.name || product).join(', ');
+                if (detail) details[detail] = (details[detail] || 0) + 1;
+            });
+            const rows = (values, color) => { const palette = color === 'orange' ? { text: 'text-orange-600', bar: 'bg-orange-500' } : { text: 'text-indigo-600', bar: 'bg-indigo-500' }; return Object.entries(values).sort((first, second) => second[1] - first[1]).slice(0, 5).map(([label, count]) => {
+                const percentage = Math.round(count / records.length * 100);
+                return `<div class="space-y-1"><div class="flex items-center justify-between gap-2 text-[10px] font-bold text-slate-600"><span class="truncate">${escapeHtml(label)}</span><strong class="shrink-0 ${palette.text}">${percentage}%</strong></div><div class="h-2 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full ${palette.bar}" style="width:${percentage}%"></div></div></div>`;
+            }).join(''); };
+            target.innerHTML = `<div><p class="mb-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Motivos das perdas</p><div class="space-y-3">${rows(reasons, 'orange')}</div></div><div><p class="mb-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Produto / detalhe citado</p><div class="space-y-3">${Object.keys(details).length ? rows(details, 'indigo') : '<p class="text-xs text-slate-400">Informe produto, tamanho ou detalhe no atendimento para gerar este mapa.</p>'}</div></div>`;
+        }
+
+        function renderProductAnalytics() {
+            renderLossHeatmap('seller-product-analytics-content', analyticsLastWeekRecords());
+            renderLossHeatmap('manager-product-analytics-content', analyticsLastWeekRecords());
+            lucide.createIcons();
         }
 
         function conditionalStorageKey() { return scopedKey('siga-condicionais'); }
