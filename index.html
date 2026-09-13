@@ -458,10 +458,10 @@
                 <label class="text-[10px] font-black uppercase tracking-wider text-slate-400 md:col-span-2">Semana da meta
                     <select id="sales-week-goal-select" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 outline-none"></select>
                 </label>
-                <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Início da semana
+                <label id="sales-manual-week-range" class="hidden text-[10px] font-black uppercase tracking-wider text-slate-400">Início da semana
                     <span class="mt-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3"><input id="sales-week-start" type="date" class="w-full border-0 px-0 py-2 text-sm font-bold text-slate-700 outline-none"><i data-lucide="calendar-days" class="h-4 w-4 text-indigo-500"></i></span>
                 </label>
-                <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Fim da semana
+                <label id="sales-manual-week-end" class="hidden text-[10px] font-black uppercase tracking-wider text-slate-400">Fim da semana
                     <span class="mt-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3"><input id="sales-week-end" type="date" class="w-full border-0 px-0 py-2 text-sm font-bold text-slate-700 outline-none"><i data-lucide="calendar-days" class="h-4 w-4 text-indigo-500"></i></span>
                 </label>
             </div>
@@ -1897,10 +1897,24 @@
             const start = kind === 'sales' ? salesWeekStart : serviceWeekStart;
             const end = kind === 'sales' ? salesWeekEnd : serviceWeekEnd;
             const goals = weeklyGoalsForCurrentUser();
+            const startInput = document.getElementById(`${kind}-week-start`);
+            const endInput = document.getElementById(`${kind}-week-end`);
+            startInput.closest('label')?.classList.toggle('hidden', goals.length > 0);
+            endInput.closest('label')?.classList.toggle('hidden', goals.length > 0);
+            const selectedGoal = goals.find(goal => goal.weekStart === start && goal.weekEnd === end) || goals[0];
             select.innerHTML = goals.length
-                ? goals.map(goal => `<option value="${goal.id}" ${goal.weekStart === start && goal.weekEnd === end ? 'selected' : ''}>${escapeHtml(goal.name || 'Semana')} · ${goal.weekStart} até ${goal.weekEnd}</option>`).join('')
+                ? goals.map(goal => `<option value="${goal.id}" ${goal.id === selectedGoal.id ? 'selected' : ''}>${escapeHtml(goal.name || 'Semana')} · ${goal.weekStart} até ${goal.weekEnd}</option>`).join('')
                 : '<option value="">Nenhuma semana cadastrada para você</option>';
             select.disabled = !goals.length;
+            if (selectedGoal && (selectedGoal.weekStart !== start || selectedGoal.weekEnd !== end)) {
+                if (kind === 'sales') {
+                    salesWeekStart = selectedGoal.weekStart;
+                    salesWeekEnd = selectedGoal.weekEnd;
+                } else {
+                    serviceWeekStart = selectedGoal.weekStart;
+                    serviceWeekEnd = selectedGoal.weekEnd;
+                }
+            }
         }
 
         function selectWeeklyPeriod(kind, goalId) {
