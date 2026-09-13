@@ -4,11 +4,18 @@
 
 create extension if not exists pgcrypto;
 
--- Compatibilidade com a tabela legada, caso ainda exista no projeto.
+-- Compatibilidade com a coluna antiga de senha, caso ainda exista no projeto.
 do $$
 begin
-    if to_regclass('public.perfs') is not null then
-        alter table public.perfs alter column password drop not null;
+    if to_regclass('public.perfis') is not null
+       and exists (
+           select 1
+           from information_schema.columns
+           where table_schema = 'public'
+             and table_name = 'perfis'
+             and column_name = 'password'
+       ) then
+        alter table public.perfis alter column password drop not null;
     end if;
 end;
 $$;
