@@ -196,7 +196,7 @@
                     <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400 sm:col-span-2">Nome completo<input id="usuario-name-input" required class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400"></label>
                     <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Função<select id="usuario-role-input" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400"><option value="vendedor">Vendedor</option><option value="gerente">Gerente</option></select></label>
                     <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Login<input id="usuario-username-input" required class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400"></label>
-                    <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400 sm:col-span-2">Senha numérica<input id="usuario-password-input" required inputmode="numeric" pattern="[0-9]+" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400"></label>
+                    <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400 sm:col-span-2">Senha numérica<input id="usuario-password-input" inputmode="numeric" pattern="[0-9]+" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400"></label>
                     <div class="flex justify-end gap-2 sm:col-span-2"><button type="button" id="cancel-usuario-edit" class="hidden rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500">Cancelar edição</button><button type="submit" class="rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-black text-white hover:bg-emerald-600">Salvar acesso</button></div>
                 </form>
                 <div id="usuario-list" class="space-y-2"></div>
@@ -1070,7 +1070,25 @@
                 return sanitized;
             } catch (error) { return []; }
         }
-        function saveUsuarios(list) { const previous = getUsuarios(); localStorage.setItem(usuariosStorageKey, JSON.stringify(list)); syncStoredList(usuariosStorageKey, list, previous.filter(item => !list.some(next => next.id === item.id)).map(item => item.id)); }
+        function saveUsuarios(list) {
+            const previous = getUsuarios();
+            const publicProfiles = list.map(({ password, senha, passwordHash, ...profile }) => profile);
+            localStorage.setItem(usuariosStorageKey, JSON.stringify(publicProfiles));
+            syncStoredList(usuariosStorageKey, publicProfiles, previous.filter(item => !publicProfiles.some(next => next.id === item.id)).map(item => item.id));
+        }
+
+        const personLoginSelectionKey = 'siga-login-selecao';
+
+        function getPersonLoginSelection() {
+            try {
+                const selection = JSON.parse(localStorage.getItem(personLoginSelectionKey));
+                return selection && typeof selection === 'object' ? selection : {};
+            } catch (error) { return {}; }
+        }
+
+        function savePersonLoginSelection(changes) {
+            localStorage.setItem(personLoginSelectionKey, JSON.stringify({ ...getPersonLoginSelection(), ...changes }));
+        }
 
         function getContents() { try { const saved = JSON.parse(localStorage.getItem('siga-conteudos')); return Array.isArray(saved) ? saved : []; } catch (error) { return []; } }
         function saveContents(list) { const previous = getContents(); localStorage.setItem('siga-conteudos', JSON.stringify(list)); syncStoredList('siga-conteudos', list, previous.filter(item => !list.some(next => next.id === item.id)).map(item => item.id)); }
@@ -1222,11 +1240,14 @@
             form.dataset.fullSlug = normalizedSlug;
             document.getElementById('pessoa-login-error').textContent = '';
             const stores = getLojas();
+            const savedSelection = getPersonLoginSelection();
             const storeSelect = document.getElementById('pessoa-store-input');
             storeSelect.innerHTML = '<option value="">Selecione a loja</option>' + stores.map(store => `<option value="${store.id}">${escapeHtml(store.name)}</option>`).join('');
             const linkedUser = normalizedSlug ? findUsuarioByAccessSlug(normalizedSlug) : null;
-            storeSelect.value = linkedUser?.lojaId || '';
-            populatePersonUsers(storeSelect.value, linkedUser?.id || '');
+            const selectedStoreId = linkedUser?.lojaId || savedSelection.lojaId || '';
+            const selectedUserId = linkedUser?.id || savedSelection.userId || '';
+            storeSelect.value = stores.some(store => store.id === selectedStoreId) ? selectedStoreId : '';
+            populatePersonUsers(storeSelect.value, selectedUserId);
         }
 
         function populatePersonUsers(lojaId, selectedId = '') {
@@ -1234,7 +1255,8 @@
             const users = getUsuarios().filter(user => user.lojaId === lojaId);
             userSelect.innerHTML = '<option value="">Selecione seu nome</option>' + users.map(user => `<option value="${user.id}">${escapeHtml(user.name)}</option>`).join('');
             userSelect.disabled = !lojaId;
-            userSelect.value = selectedId;
+            userSelect.value = Array.from(userSelect.options).some(option => option.value === selectedId) ? selectedId : '';
+            savePersonLoginSelection({ lojaId: lojaId || '', userId: userSelect.value || '' });
         }
 
         function toggleMoodCardForSession() {
@@ -2040,7 +2062,11 @@
                 await hydrateFromSupabase();
                 location.hash = 'app';
             });
-            document.getElementById('pessoa-store-input').addEventListener('change', event => populatePersonUsers(event.target.value));
+            document.getElementById('pessoa-store-input').addEventListener('change', event => {
+                savePersonLoginSelection({ lojaId: event.target.value, userId: '' });
+                populatePersonUsers(event.target.value);
+            });
+            document.getElementById('pessoa-user-input').addEventListener('change', event => savePersonLoginSelection({ userId: event.target.value }));
 
             document.getElementById('loja-form').addEventListener('submit', event => {
                 event.preventDefault();
@@ -2083,7 +2109,7 @@
                 renderProductAdminList();
             });
 
-            document.getElementById('usuario-form').addEventListener('submit', event => {
+            document.getElementById('usuario-form').addEventListener('submit', async event => {
                 event.preventDefault();
                 if (!selectedLojaId) return;
                 const editingId = document.getElementById('usuario-editing-id').value;
@@ -2091,15 +2117,19 @@
                 const role = document.getElementById('usuario-role-input').value;
                 const username = document.getElementById('usuario-username-input').value.trim();
                 const password = document.getElementById('usuario-password-input').value;
-                if (!name || !username || !password || !/^\d+$/.test(password)) { showToast('A senha deve conter apenas números.'); return; }
+                if (!name || !username || (!editingId && !password) || (password && !/^\d+$/.test(password))) { showToast('A senha deve conter apenas números.'); return; }
                 const loja = getLojas().find(item => item.id === selectedLojaId);
                 const usuarios = getUsuarios();
-                if (editingId) {
-                    saveUsuarios(usuarios.map(item => item.id === editingId ? { ...item, name, role, username, password } : item));
-                } else {
-                    const personSlug = uniqueSlugFor(usuarios.filter(item => item.lojaId === selectedLojaId), name);
-                    usuarios.push({ id: crypto.randomUUID(), lojaId: selectedLojaId, role, name, username, password, slug: personSlug, fullSlug: `${loja.slug}-${personSlug}`, createdAt: new Date().toISOString() });
-                    saveUsuarios(usuarios);
+                const existing = usuarios.find(item => item.id === editingId);
+                const personSlug = existing?.slug || uniqueSlugFor(usuarios.filter(item => item.lojaId === selectedLojaId), name);
+                const profile = { ...(existing || {}), id: editingId || crypto.randomUUID(), lojaId: selectedLojaId, role, name, username, slug: personSlug, fullSlug: `${loja.slug}-${personSlug}`, createdAt: existing?.createdAt || new Date().toISOString() };
+                try {
+                    await saveProfileCredentials(profile, password);
+                    saveUsuarios(editingId ? usuarios.map(item => item.id === editingId ? profile : item) : [...usuarios, profile]);
+                } catch (error) {
+                    console.error('Falha ao salvar credenciais do usuário:', error);
+                    showToast('Não foi possível salvar a senha no Supabase.', 'error');
+                    return;
                 }
                 event.target.reset();
                 document.getElementById('usuario-editing-id').value = '';
@@ -2130,7 +2160,8 @@
                     document.getElementById('usuario-name-input').value = usuario.name;
                     document.getElementById('usuario-role-input').value = usuario.role;
                     document.getElementById('usuario-username-input').value = usuario.username;
-                    document.getElementById('usuario-password-input').value = usuario.password;
+                    document.getElementById('usuario-password-input').value = '';
+                    document.getElementById('usuario-password-input').placeholder = 'Digite para definir ou alterar';
                     document.getElementById('cancel-usuario-edit').classList.remove('hidden');
                     return;
                 }
