@@ -869,10 +869,11 @@
                     if (session.role === 'gerente' && !session.viewingUserId) getUsuarios().filter(user => user.lojaId === session.lojaId).forEach(user => writeStoredList(`${storageKey}::${user.id}`, []));
                     else if (value) writeStoredList(`${storageKey}::${value}`, []);
                 }
-                if (list.length) {
+                const sanitizedList = table === 'lojas' ? list.filter(store => !isDemoStore(store)) : list;
+                if (sanitizedList.length) {
                     const scopedTables = new Set(['tarefas', 'vendas', 'atendimentos', 'condicionais', 'vendas_loja']);
                     if (scopedTables.has(table)) {
-                        const groups = list.reduce((result, item) => {
+                        const groups = sanitizedList.reduce((result, item) => {
                             const scopeId = table === 'vendas_loja' ? item.lojaId : (item.userId || item.ownerId);
                             if (scopeId) (result[scopeId] ||= []).push(item);
                             return result;
@@ -881,7 +882,9 @@
                             const key = `${storageKey}::${userId}`;
                             writeStoredList(key, table === 'tarefas' ? items : mergeStoredLists(readStoredList(key), items));
                         });
-                    } else writeStoredList(storageKey, mergeStoredLists(readStoredList(storageKey), list));
+                    } else writeStoredList(storageKey, mergeStoredLists(readStoredList(storageKey).filter(item => table !== 'lojas' || !isDemoStore(item)), sanitizedList));
+                } else if (table === 'lojas') {
+                    writeStoredList(storageKey, readStoredList(storageKey).filter(store => !isDemoStore(store)));
                 }
             }));
             lastSupabaseHydration = Date.now();
@@ -968,6 +971,23 @@
         }
 
         function writeStoredList(key, list) { localStorage.setItem(key, JSON.stringify(list)); }
+
+        function isDemoStore(store) {
+            const label = `${store?.name || ''} ${store?.nome || ''} ${store?.slug || ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return /(^|[\s_-])(demo|demonstracao|exemplo)([\s_-]|$)/.test(label);
+        }
+
+        async function removeDemoStoresFromSupabase() {
+            const { data: stores, error } = await sigaSupabase.from('lojas').select('id,nome,slug');
+            if (error || !stores?.length) return;
+            const demoIds = stores.filter(isDemoStore).map(store => store.id).filter(isSupabaseUuid);
+            if (!demoIds.length) return;
+            await sigaSupabase.from('perfis').delete().in('loja_id', demoIds);
+            await sigaSupabase.from('lojas').delete().in('id', demoIds);
+            const localStores = getLojas().filter(store => !demoIds.includes(store.id) && !isDemoStore(store));
+            localStorage.setItem(lojasStorageKey, JSON.stringify(localStores));
+            localStorage.setItem(usuariosStorageKey, JSON.stringify(getUsuarios().filter(user => !demoIds.includes(user.lojaId))));
+        }
 
         function mergeStoredLists(local, remote) {
             const merged = new Map(local.map(item => [item.id, item]));
@@ -2280,6 +2300,7 @@
             pruneExpiredProjectData();
             const { data } = await sigaSupabase.auth.getSession();
             if (data.session && getSession()?.type === 'master') saveSession({ type: 'master' });
+            if (getSession()?.type === 'master') await removeDemoStoresFromSupabase();
             await hydrateFromSupabase();
             pruneExpiredProjectData();
             ensureDefaultMoodContents();
