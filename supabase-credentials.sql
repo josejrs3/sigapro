@@ -35,6 +35,7 @@ set search_path = public, extensions
 as $$
 declare
     v_created_at timestamptz;
+    v_cargo_sql text;
 begin
     if auth.uid() is null then
         raise exception 'Acesso administrativo exige autenticação';
@@ -52,24 +53,29 @@ begin
         raise exception 'A senha deve conter apenas números';
     end if;
 
-    insert into public.perfis (
-        id, loja_id, nome, cargo, username, slug, full_slug, password_hash, created_at
-    ) values (
-        p_id, p_loja_id, p_nome, p_cargo::public.perfl_cargo, p_username, p_slug, p_full_slug,
+    v_cargo_sql := quote_literal(p_cargo);
+
+    execute format($sql$
+        insert into public.perfis (
+            id, loja_id, nome, cargo, username, slug, full_slug, password_hash, created_at
+        ) values (
+            $1, $2, $3, %s, $4, $5, $6, $7, $8
+        )
+        on conflict (id) do update set
+            loja_id = excluded.loja_id,
+            nome = excluded.nome,
+            cargo = excluded.cargo,
+            username = excluded.username,
+            slug = excluded.slug,
+            full_slug = excluded.full_slug,
+            password_hash = case
+                when $9 is null then public.perfis.password_hash
+                else excluded.password_hash
+            end
+    $sql$, v_cargo_sql)
+    using p_id, p_loja_id, p_nome, p_username, p_slug, p_full_slug,
         case when p_password is null then null else crypt(p_password, gen_salt('bf', 10)) end,
-        v_created_at
-    )
-    on conflict (id) do update set
-        loja_id = excluded.loja_id,
-        nome = excluded.nome,
-        cargo = excluded.cargo,
-        username = excluded.username,
-        slug = excluded.slug,
-        full_slug = excluded.full_slug,
-        password_hash = case
-            when p_password is null then public.perfis.password_hash
-            else excluded.password_hash
-        end;
+        v_created_at, p_password;
 
     return query
         select p.id, p.loja_id, p.nome, p.cargo, p.username, p.slug, p.full_slug, p.created_at
