@@ -33,9 +33,19 @@ language plpgsql
 security definer
 set search_path = public, extensions
 as $$
+declare
+    v_created_at timestamptz;
 begin
     if auth.uid() is null then
         raise exception 'Acesso administrativo exige autenticação';
+    end if;
+
+    v_created_at := now();
+    select p.created_at into v_created_at
+    from public.perfis as p
+    where p.id = p_id;
+    if v_created_at is null then
+        v_created_at := now();
     end if;
 
     if p_password is not null and p_password !~ '^[0-9]+$' then
@@ -47,7 +57,7 @@ begin
     ) values (
         p_id, p_loja_id, p_nome, p_cargo, p_username, p_slug, p_full_slug,
         case when p_password is null then null else crypt(p_password, gen_salt('bf', 10)) end,
-        coalesce((select created_at from public.perfis where id = p_id), now())
+        v_created_at
     )
     on conflict (id) do update set
         loja_id = excluded.loja_id,
