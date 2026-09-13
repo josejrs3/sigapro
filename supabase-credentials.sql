@@ -58,7 +58,7 @@ begin
     select p.created_at
     into v_created_at
     from public.perfis as p
-    where p.id = p_id;
+    where p.id = $1;
 
     v_created_at := coalesce(v_created_at, now());
     v_cargo := p_cargo;
@@ -86,9 +86,9 @@ begin
         end;
 
     return query
-        select p.id, p.loja_id, p.nome, p.cargo::text, p.username, p.slug, p.full_slug, p.created_at
-        from public.perfis as p
-        where p.id = p_id;
+        select profile.id, profile.loja_id, profile.nome, profile.cargo::text, profile.username, profile.slug, profile.full_slug, profile.created_at
+        from public.perfis as profile
+        where profile.id = $1;
 end;
 $$;
 
