@@ -756,6 +756,12 @@
         }
 
         async function saveProfileCredentials(profile, password = '') {
+            const { data: authData } = await sigaSupabase.auth.getSession();
+            if (!authData.session) {
+                const error = new Error('Sessão do Supabase expirada');
+                error.code = 'AUTH_SESSION_MISSING';
+                throw error;
+            }
             const { error } = await sigaSupabase.rpc('admin_save_profile', {
                 p_id: profile.id,
                 p_loja_id: profile.lojaId,
@@ -766,7 +772,10 @@
                 p_full_slug: profile.fullSlug,
                 p_password: password || null
             });
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase admin_save_profile:', { message: error.message, code: error.code, details: error.details, hint: error.hint });
+                throw error;
+            }
         }
 
         async function verifyProfileCredentials(profileId, password) {
@@ -2128,7 +2137,13 @@
                     saveUsuarios(editingId ? usuarios.map(item => item.id === editingId ? profile : item) : [...usuarios, profile]);
                 } catch (error) {
                     console.error('Falha ao salvar credenciais do usuário:', error);
-                    showToast('Não foi possível salvar a senha no Supabase.', 'error');
+                    const message = String(error?.message || '').toLowerCase();
+                    const feedback = error?.code === 'AUTH_SESSION_MISSING' || message.includes('autenticação') || message.includes('authentication') || error?.code === '42501'
+                            ? 'Faça login novamente no painel Master antes de salvar.'
+                            : message.includes('function') || error?.code === '42883'
+                                ? 'Execute o arquivo supabase-credentials.sql no SQL Editor do Supabase.'
+                            : 'O Supabase recusou o salvamento. Veja o erro detalhado no console do navegador.';
+                    showToast(feedback, 'error');
                     return;
                 }
                 event.target.reset();
