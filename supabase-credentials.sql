@@ -67,23 +67,27 @@ begin
         else crypt(p_password, gen_salt('bf', 10))
     end;
 
-    insert into public.perfis (
-        id, loja_id, nome, cargo, username, slug, full_slug, password_hash, created_at
-    ) values (
-        p_id, p_loja_id, p_nome, v_cargo, p_username, p_slug, p_full_slug,
-        v_password_hash, v_created_at
-    )
-    on conflict (id) do update set
-        loja_id = excluded.loja_id,
-        nome = excluded.nome,
-        cargo = excluded.cargo,
-        username = excluded.username,
-        slug = excluded.slug,
-        full_slug = excluded.full_slug,
+    update public.perfis as current_profile
+    set loja_id = p_loja_id,
+        nome = p_nome,
+        cargo = v_cargo,
+        username = p_username,
+        slug = p_slug,
+        full_slug = p_full_slug,
         password_hash = case
-            when p_password is null then public.perfis.password_hash
-            else excluded.password_hash
-        end;
+            when p_password is null then current_profile.password_hash
+            else v_password_hash
+        end
+    where current_profile.id = p_id;
+
+    if not found then
+        insert into public.perfis (
+            id, loja_id, nome, cargo, username, slug, full_slug, password_hash, created_at
+        ) values (
+            p_id, p_loja_id, p_nome, v_cargo, p_username, p_slug, p_full_slug,
+            v_password_hash, v_created_at
+        );
+    end if;
 
     return query
         select profile.id, profile.loja_id, profile.nome, profile.cargo::text, profile.username, profile.slug, profile.full_slug, profile.created_at
