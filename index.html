@@ -195,7 +195,6 @@
                     <input type="hidden" id="usuario-editing-id">
                     <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400 sm:col-span-2">Nome completo<input id="usuario-name-input" required class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400"></label>
                     <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Função<select id="usuario-role-input" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400"><option value="vendedor">Vendedor</option><option value="gerente">Gerente</option></select></label>
-                    <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400">Login<input id="usuario-username-input" required class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400"></label>
                     <label class="block text-[10px] font-black uppercase tracking-wider text-slate-400 sm:col-span-2">Senha numérica<input id="usuario-password-input" inputmode="numeric" pattern="[0-9]+" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-indigo-400"></label>
                     <div class="flex justify-end gap-2 sm:col-span-2"><button type="button" id="cancel-usuario-edit" class="hidden rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500">Cancelar edição</button><button type="submit" class="rounded-xl bg-emerald-500 px-5 py-2.5 text-xs font-black text-white hover:bg-emerald-600">Salvar acesso</button></div>
                 </form>
@@ -2043,7 +2042,7 @@
             document.getElementById('usuario-list').innerHTML = equipe.length ? equipe.map(usuario => `
                 <div class="rounded-xl border border-slate-100 p-3">
                     <div class="flex items-center justify-between gap-2">
-                        <div><p class="text-sm font-bold text-slate-700">${escapeHtml(usuario.name)} <span class="ml-1 rounded-full ${usuario.role === 'gerente' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-600'} px-2 py-0.5 text-[9px] font-black uppercase">${usuario.role === 'gerente' ? 'Gerente' : 'Vendedor'}</span></p><p class="text-[10px] text-slate-400">Login: ${escapeHtml(usuario.username)}</p></div>
+                        <div><p class="text-sm font-bold text-slate-700">${escapeHtml(usuario.name)} <span class="ml-1 rounded-full ${usuario.role === 'gerente' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-600'} px-2 py-0.5 text-[9px] font-black uppercase">${usuario.role === 'gerente' ? 'Gerente' : 'Vendedor'}</span></p></div>
                         <div class="flex items-center gap-1">
                             <button type="button" data-edit-usuario="${usuario.id}" aria-label="Editar acesso" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-indigo-600"><i data-lucide="pencil" class="h-4 w-4"></i></button>
                             <button type="button" data-delete-usuario="${usuario.id}" aria-label="Excluir acesso" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-red-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
@@ -2155,14 +2154,13 @@
                 const editingId = document.getElementById('usuario-editing-id').value;
                 const name = document.getElementById('usuario-name-input').value.trim();
                 const role = document.getElementById('usuario-role-input').value;
-                const username = document.getElementById('usuario-username-input').value.trim();
                 const password = document.getElementById('usuario-password-input').value;
-                if (!name || !username || (!editingId && !password) || (password && !/^\d+$/.test(password))) { showToast('A senha deve conter apenas números.'); return; }
+                if (!name || (!editingId && !password) || (password && !/^\d+$/.test(password))) { showToast('A senha deve conter apenas números.'); return; }
                 const loja = getLojas().find(item => item.id === selectedLojaId);
                 const usuarios = getUsuarios();
                 const existing = usuarios.find(item => item.id === editingId);
                 const personSlug = existing?.slug || uniqueSlugFor(usuarios.filter(item => item.lojaId === selectedLojaId), name);
-                const profile = { ...(existing || {}), id: editingId || crypto.randomUUID(), lojaId: selectedLojaId, role, name, username, slug: personSlug, fullSlug: `${loja.slug}-${personSlug}`, createdAt: existing?.createdAt || new Date().toISOString() };
+                const profile = { ...(existing || {}), id: editingId || crypto.randomUUID(), lojaId: selectedLojaId, role, name, username: existing?.username || personSlug, slug: personSlug, fullSlug: `${loja.slug}-${personSlug}`, createdAt: existing?.createdAt || new Date().toISOString() };
                 try {
                     await saveProfileCredentials(profile, password);
                     saveUsuarios(editingId ? usuarios.map(item => item.id === editingId ? profile : item) : [...usuarios, profile]);
@@ -2206,7 +2204,6 @@
                     document.getElementById('usuario-editing-id').value = usuario.id;
                     document.getElementById('usuario-name-input').value = usuario.name;
                     document.getElementById('usuario-role-input').value = usuario.role;
-                    document.getElementById('usuario-username-input').value = usuario.username;
                     document.getElementById('usuario-password-input').value = '';
                     document.getElementById('usuario-password-input').placeholder = 'Digite para definir ou alterar';
                     document.getElementById('cancel-usuario-edit').classList.remove('hidden');
