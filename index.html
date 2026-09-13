@@ -847,7 +847,6 @@
                 return;
             }
             clearPendingSupabaseSync(storageKey);
-            showToast(`Dados sincronizados em ${table}.`);
         }
 
         function retryPendingSupabaseSyncs() {
@@ -2728,7 +2727,17 @@
         function getSales() {
             try {
                 const savedSales = JSON.parse(localStorage.getItem(salesStorageKey()));
-                return Array.isArray(savedSales) ? savedSales : [];
+                const sales = Array.isArray(savedSales) ? savedSales : [];
+                const saleIds = new Set(sales.map(sale => sale.id));
+                const derivedSales = getServices().filter(service => service.outcome === 'converted' && service.saleId && !saleIds.has(service.saleId)).map(service => ({
+                    id: service.saleId,
+                    client: service.client || '',
+                    value: Number(service.value || 0),
+                    datetime: service.datetime,
+                    date: service.date || String(service.datetime || '').slice(0, 10),
+                    products: service.products || []
+                }));
+                return [...sales, ...derivedSales];
             } catch (error) {
                 return [];
             }
@@ -2913,7 +2922,22 @@
         let editingConditionalId = null;
 
         function getConditionals() {
-            try { const saved = JSON.parse(localStorage.getItem(conditionalStorageKey())); return Array.isArray(saved) ? saved : []; } catch (error) { return []; }
+            try {
+                const saved = JSON.parse(localStorage.getItem(conditionalStorageKey()));
+                const conditionals = Array.isArray(saved) ? saved : [];
+                const conditionalIds = new Set(conditionals.map(item => item.id));
+                const derivedConditionals = getServices().filter(service => service.outcome === 'conditional' && service.conditionalId && !conditionalIds.has(service.conditionalId)).map(service => ({
+                    id: service.conditionalId,
+                    client: service.client || '',
+                    phone: service.phone || '',
+                    products: service.products || [],
+                    observation: service.notes || '',
+                    createdAt: service.datetime || new Date().toISOString(),
+                    status: 'aberta',
+                    taskId: null
+                }));
+                return [...conditionals, ...derivedConditionals];
+            } catch (error) { return []; }
         }
 
         function saveConditionals(list) { const previous = getConditionals(); localStorage.setItem(conditionalStorageKey(), JSON.stringify(list)); syncStoredList(conditionalStorageKey(), list, previous.filter(item => !list.some(next => next.id === item.id)).map(item => item.id)); }
@@ -3381,7 +3405,7 @@
                 if (isConditional && (!conditionalTaskDate || !conditionalTaskTime)) return showToast('Escolha a data e o horário da tarefa de cobrança.');
                 const previousService = editingServiceId ? getServices().find(item => item.id === editingServiceId) : null; const existingSaleId = previousService?.saleId; const existingConditionalId = previousService?.conditionalId; const now = new Date(); const serviceDate = pendingAddDate || getLocalDateKey(); const datetime = previousService?.datetime || `${serviceDate}T${now.toTimeString().slice(0, 8)}`; const labels = { converted: 'Venda realizada', conditional: 'Levou condicional', authorized: 'Venda permitida / aguardando fechamento', 'no-product': 'Não tínhamos o produto', 'just-looking': 'Só estava olhando', expensive: 'Achou caro', 'no-decision': 'Não tomou decisão', competitor: 'Preferiu a concorrência', 'return-later': 'Vai voltar depois', other: 'Outro motivo' };
                 const client = document.getElementById('service-client').value.trim();
-                const service = { id: editingServiceId || crypto.randomUUID(), client, outcome, outcomeLabel: labels[outcome], value: converted ? value : 0, products: converted ? products : (isConditional ? conditionalProducts : []), shownProducts: (!converted && !isConditional) ? shownProducts : [], demand: document.getElementById('service-demand').value.trim(), notes: document.getElementById('service-notes').value.trim(), datetime, date: datetime.slice(0, 10), saleId: existingSaleId, conditionalId: existingConditionalId };
+                const service = { id: editingServiceId || crypto.randomUUID(), client, phone, outcome, outcomeLabel: labels[outcome], value: converted ? value : 0, products: converted ? products : (isConditional ? conditionalProducts : []), shownProducts: (!converted && !isConditional) ? shownProducts : [], demand: document.getElementById('service-demand').value.trim(), notes: document.getElementById('service-notes').value.trim(), datetime, date: datetime.slice(0, 10), saleId: existingSaleId, conditionalId: existingConditionalId };
                 const services = getServices(); saveServices(editingServiceId ? services.map(item => item.id === editingServiceId ? service : item) : [...services, service]);
                 if (converted) { const sales = getSales(); const sale = { id: existingSaleId || crypto.randomUUID(), client, value, datetime, date: service.date, products }; saveSales(existingSaleId ? sales.map(item => item.id === existingSaleId ? sale : item) : [...sales, sale]); service.saleId = sale.id; saveServices(getServices().map(item => item.id === service.id ? service : item)); } else if (existingSaleId) saveSales(getSales().filter(item => item.id !== existingSaleId));
                 if (isConditional) { const conditional = upsertConditionalRecord({ id: existingConditionalId, client, phone, products: conditionalProducts, observation: service.notes, taskDate: conditionalTaskDate, taskTime: conditionalTaskTime }); service.conditionalId = conditional.id; saveServices(getServices().map(item => item.id === service.id ? service : item)); } else if (existingConditionalId) { const conditional = getConditionals().find(item => item.id === existingConditionalId); saveConditionals(getConditionals().filter(item => item.id !== existingConditionalId)); if (conditional?.taskId) saveTasks(getTasks().filter(item => item.id !== conditional.taskId)); renderConditionals(); renderDashboardConditionals(); }
