@@ -4,6 +4,15 @@
 
 create extension if not exists pgcrypto;
 
+-- Compatibilidade com a tabela legada, caso ainda exista no projeto.
+do $$
+begin
+    if to_regclass('public.perfs') is not null then
+        alter table public.perfs alter column password drop not null;
+    end if;
+end;
+$$;
+
 alter table public.perfis
     add column if not exists password_hash text;
 
@@ -35,51 +44,50 @@ set search_path = public, extensions
 as $$
 declare
     v_created_at timestamptz;
-    v_cargo_sql text;
+    v_cargo public.perfis.cargo%type;
+    v_password_hash text;
 begin
     if auth.uid() is null then
         raise exception 'Acesso administrativo exige autenticação';
-    end if;
-
-    v_created_at := now();
-    select p.created_at into v_created_at
-    from public.perfis as p
-    where p.id = p_id;
-    if v_created_at is null then
-        v_created_at := now();
     end if;
 
     if p_password is not null and p_password !~ '^[0-9]+$' then
         raise exception 'A senha deve conter apenas números';
     end if;
 
-    v_cargo_sql := quote_literal(p_cargo);
+    select p.created_at
+    into v_created_at
+    from public.perfis as p
+    where p.id = p_id;
 
-    execute format($sql$
-        insert into public.perfis (
-            id, loja_id, nome, cargo, username, slug, full_slug, password_hash, created_at
-        ) values (
-            $1, $2, $3, %s, $4, $5, $6, $7, $8
-        )
-        on conflict (id) do update set
-            loja_id = excluded.loja_id,
-            nome = excluded.nome,
-            cargo = excluded.cargo,
-            username = excluded.username,
-            slug = excluded.slug,
-            full_slug = excluded.full_slug,
-            password_hash = case
-                when $9 is null then public.perfis.password_hash
-                else excluded.password_hash
-            end
-    $sql$, v_cargo_sql)
-    using p_id, p_loja_id, p_nome, p_username, p_slug, p_full_slug,
-        case when p_password is null then null else crypt(p_password, gen_salt('bf', 10)) end,
-        v_created_at, p_password;
+    v_created_at := coalesce(v_created_at, now());
+    v_cargo := p_cargo;
+    v_password_hash := case
+        when p_password is null then null
+        else crypt(p_password, gen_salt('bf', 10))
+    end;
+
+    insert into public.perfis (
+        id, loja_id, nome, cargo, username, slug, full_slug, password_hash, created_at
+    ) values (
+        p_id, p_loja_id, p_nome, v_cargo, p_username, p_slug, p_full_slug,
+        v_password_hash, v_created_at
+    )
+    on conflict (id) do update set
+        loja_id = excluded.loja_id,
+        nome = excluded.nome,
+        cargo = excluded.cargo,
+        username = excluded.username,
+        slug = excluded.slug,
+        full_slug = excluded.full_slug,
+        password_hash = case
+            when p_password is null then public.perfis.password_hash
+            else excluded.password_hash
+        end;
 
     return query
-        select p.id, p.loja_id, p.nome, p.cargo, p.username, p.slug, p.full_slug, p.created_at
-        from public.perfis p
+        select p.id, p.loja_id, p.nome, p.cargo::text, p.username, p.slug, p.full_slug, p.created_at
+        from public.perfis as p
         where p.id = p_id;
 end;
 $$;
@@ -104,8 +112,8 @@ language sql
 security definer
 set search_path = public, extensions
 as $$
-    select p.id, p.loja_id, p.nome, p.cargo, p.username, p.slug, p.full_slug, p.created_at
-    from public.perfis p
+    select p.id, p.loja_id, p.nome, p.cargo::text, p.username, p.slug, p.full_slug, p.created_at
+    from public.perfis as p
     where p.id = p_profile_id
       and p_password is not null
       and p_password ~ '^[0-9]+$'
