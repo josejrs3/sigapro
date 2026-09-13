@@ -162,6 +162,7 @@
                     <button type="submit" class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white hover:bg-indigo-700">Adicionar loja</button>
                 </form>
                 <div id="loja-list" class="space-y-2"></div>
+                <div class="mt-4 flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-2"><input id="standard-access-link" type="text" readonly onclick="this.select()" class="min-w-0 flex-1 truncate bg-transparent text-[10px] font-semibold text-indigo-700 outline-none"><button type="button" data-copy-standard-link class="shrink-0 text-[10px] font-black text-indigo-600 hover:text-indigo-800">Copiar link padrão</button></div>
             </section>
 
             <section id="master-content-view" class="hidden rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
@@ -1090,8 +1091,12 @@
             if (tip) document.getElementById('daily-sales-tip').textContent = `"${tip.text}"`;
         }
 
-        function accessLinkFor(usuario) {
-            return `${location.origin}${location.pathname}#acesso/${usuario.fullSlug}`;
+        function accessLinkFor() {
+            return `${location.origin}${location.pathname}#acesso`;
+        }
+
+        function standardAccessLink() {
+            return accessLinkFor();
         }
 
         function normalizeAccessSlug(value) {
@@ -1172,8 +1177,8 @@
             const hash = location.hash.replace(/^#/, '');
             const session = getSession();
 
-            if (hash.startsWith('acesso/')) {
-                showPersonLogin(hash.slice('acesso/'.length).trim());
+            if (hash === 'acesso' || hash.startsWith('acesso/')) {
+                showPersonLogin(hash.startsWith('acesso/') ? hash.slice('acesso/'.length).trim() : '');
                 return;
             }
             if (hash === 'master-login') {
@@ -1913,6 +1918,7 @@
 
         function renderMasterPanel() {
             const lojas = getLojas();
+            document.getElementById('standard-access-link').value = standardAccessLink();
             document.getElementById('loja-list').innerHTML = lojas.length ? lojas.map(loja => {
                 const equipe = getUsuarios().filter(item => item.lojaId === loja.id);
                 return `<div class="flex items-center justify-between rounded-xl border border-slate-100 p-3">
@@ -1981,7 +1987,6 @@
                             <button type="button" data-delete-usuario="${usuario.id}" aria-label="Excluir acesso" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 hover:text-red-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
                         </div>
                     </div>
-                    <div class="mt-2 flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-1.5"><input type="text" readonly value="${escapeHtml(accessLinkFor(usuario))}" onclick="this.select()" class="min-w-0 flex-1 truncate bg-transparent text-[10px] font-semibold text-slate-500 outline-none"><button type="button" data-copy-link="${escapeHtml(accessLinkFor(usuario))}" class="shrink-0 text-[10px] font-black text-indigo-500 hover:text-indigo-700">Copiar</button></div>
                 </div>
             `).join('') : '<p class="text-xs text-slate-400">Nenhum acesso cadastrado para esta loja.</p>';
             lucide.createIcons();
@@ -2143,6 +2148,15 @@
                     copyTextRobust(copyButton.dataset.copyLink, success => {
                         copyButton.textContent = success ? 'Copiado!' : 'Selecione e copie';
                         setTimeout(() => { copyButton.textContent = 'Copiar'; }, 1500);
+                    });
+                    return;
+                }
+
+                const copyStandardButton = event.target.closest('[data-copy-standard-link]');
+                if (copyStandardButton) {
+                    copyTextRobust(standardAccessLink(), success => {
+                        copyStandardButton.textContent = success ? 'Copiado!' : 'Selecione e copie';
+                        setTimeout(() => { copyStandardButton.textContent = 'Copiar link padrão'; }, 1500);
                     });
                     return;
                 }
