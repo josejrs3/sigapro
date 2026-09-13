@@ -55,7 +55,7 @@ begin
     insert into public.perfis (
         id, loja_id, nome, cargo, username, slug, full_slug, password_hash, created_at
     ) values (
-        p_id, p_loja_id, p_nome, p_cargo, p_username, p_slug, p_full_slug,
+        p_id, p_loja_id, p_nome, p_cargo::public.perfl_cargo, p_username, p_slug, p_full_slug,
         case when p_password is null then null else crypt(p_password, gen_salt('bf', 10)) end,
         v_created_at
     )
