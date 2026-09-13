@@ -809,9 +809,14 @@
             }
             const scopedUserId = storageKey.match(/::([^:]+)$/)?.[1] || null;
             const syncableList = table === 'tarefas' ? pending.list.filter(item => isSupabaseUuid(item.id)) : pending.list;
-            const rows = syncableList.map(item => table === 'lojas' ? { id: item.id, nome: item.name, slug: item.slug, configuracoes: item.configuracoes || {}, created_at: item.createdAt } : table === 'perfis' ? { id: item.id, loja_id: item.lojaId, nome: item.name, cargo: item.role, username: item.username, slug: item.slug, full_slug: item.fullSlug, created_at: item.createdAt } : databaseRowFromApp(table, item, scopedUserId));
+            const uniqueList = table === 'conteudos'
+                ? [...new Map(syncableList.map(item => [`${item.type}\u0000${item.text}`, item])).values()]
+                : syncableList;
+            const rows = uniqueList.map(item => table === 'lojas' ? { id: item.id, nome: item.name, slug: item.slug, configuracoes: item.configuracoes || {}, created_at: item.createdAt } : table === 'perfis' ? { id: item.id, loja_id: item.lojaId, nome: item.name, cargo: item.role, username: item.username, slug: item.slug, full_slug: item.fullSlug, created_at: item.createdAt } : databaseRowFromApp(table, item, scopedUserId));
             if (!rows.length) return;
-            const { error } = await sigaSupabase.from(table).upsert(rows);
+            const { error } = table === 'conteudos'
+                ? await sigaSupabase.from(table).upsert(rows, { onConflict: 'tipo,texto' })
+                : await sigaSupabase.from(table).upsert(rows);
             if (error) {
                 console.warn(`Falha ao sincronizar ${table}:`, error.message);
                 showToast(`Dados mantidos neste dispositivo. Sincronização pendente em ${table}.`, 'error');
@@ -1100,7 +1105,13 @@
         }
 
         function getContents() { try { const saved = JSON.parse(localStorage.getItem('siga-conteudos')); return Array.isArray(saved) ? saved : []; } catch (error) { return []; } }
-        function saveContents(list) { const previous = getContents(); localStorage.setItem('siga-conteudos', JSON.stringify(list)); syncStoredList('siga-conteudos', list, previous.filter(item => !list.some(next => next.id === item.id)).map(item => item.id)); }
+        function saveContents(list) {
+            const previous = getContents();
+            const uniqueContents = [...new Map(list.map(item => [`${item.type}\u0000${item.text}`, item])).values()];
+            localStorage.setItem('siga-conteudos', JSON.stringify(uniqueContents));
+            const removedIds = previous.filter(item => !uniqueContents.some(next => next.id === item.id)).map(item => item.id);
+            syncStoredList('siga-conteudos', uniqueContents, removedIds);
+        }
 
         function dailyContent(type) {
             const todayMood = getMoodRecords()[getLocalDateKey()] || '';
@@ -2137,12 +2148,13 @@
                     saveUsuarios(editingId ? usuarios.map(item => item.id === editingId ? profile : item) : [...usuarios, profile]);
                 } catch (error) {
                     console.error('Falha ao salvar credenciais do usuário:', error);
-                    const message = String(error?.message || '').toLowerCase();
+                    const rawMessage = error?.message || error?.details || error?.hint || error?.error_description || 'Erro desconhecido';
+                    const message = String(rawMessage).toLowerCase();
                     const feedback = error?.code === 'AUTH_SESSION_MISSING' || message.includes('autenticação') || message.includes('authentication') || error?.code === '42501'
                             ? 'Faça login novamente no painel Master antes de salvar.'
                             : message.includes('function') || error?.code === '42883'
                                 ? 'Execute o arquivo supabase-credentials.sql no SQL Editor do Supabase.'
-                            : 'O Supabase recusou o salvamento. Veja o erro detalhado no console do navegador.';
+                            : `O Supabase recusou o salvamento: ${String(rawMessage).slice(0, 140)}`;
                     showToast(feedback, 'error');
                     return;
                 }
