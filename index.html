@@ -102,7 +102,7 @@
         <div class="w-full max-w-md rounded-[1.75rem] border border-slate-100 bg-white p-6 shadow-2xl">
             <div class="mb-5 flex items-start gap-3"><div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><i data-lucide="message-circle-question" class="h-5 w-5"></i></div><div><h2 id="site-dialog-title" class="text-base font-black text-slate-800"></h2><p id="site-dialog-message" class="mt-1 whitespace-pre-line text-xs leading-relaxed text-slate-500"></p></div></div>
             <input id="site-dialog-input" class="hidden w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100" autocomplete="off">
-            <div class="mt-5 flex justify-end gap-2"><button type="button" id="site-dialog-cancel" class="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button><button type="button" id="site-dialog-confirm" class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white hover:bg-indigo-700">Confirmar</button></div>
+            <div class="mt-5 flex justify-end gap-2"><button type="button" id="site-dialog-cancel" class="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button><button type="button" id="site-dialog-alt" class="hidden rounded-xl border border-indigo-200 px-4 py-2.5 text-xs font-black text-indigo-600 hover:bg-indigo-50">Outra opção</button><button type="button" id="site-dialog-confirm" class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white hover:bg-indigo-700">Confirmar</button></div>
         </div>
     </div>
 
@@ -785,14 +785,36 @@
         }
 
         const pendingSupabaseSyncs = new Map();
+        const pendingSupabaseSyncStorageKey = 'siga-supabase-pendencias';
+
+        function getPendingSupabaseSyncs() {
+            try { return JSON.parse(localStorage.getItem(pendingSupabaseSyncStorageKey)) || {}; } catch (error) { return {}; }
+        }
+
+        function savePendingSupabaseSync(storageKey, pending) {
+            const all = getPendingSupabaseSyncs();
+            all[storageKey] = { list: pending.list, removedIds: pending.removedIds };
+            localStorage.setItem(pendingSupabaseSyncStorageKey, JSON.stringify(all));
+        }
+
+        function clearPendingSupabaseSync(storageKey) {
+            const all = getPendingSupabaseSyncs();
+            delete all[storageKey];
+            localStorage.setItem(pendingSupabaseSyncStorageKey, JSON.stringify(all));
+        }
+
+        function tableForStorageKey(storageKey) {
+            const baseKey = storageKey.replace(/::[^:]+$/, '');
+            return storageKey === lojasStorageKey ? 'lojas' : storageKey === usuariosStorageKey ? 'perfis' : databaseTableByStorageKey[baseKey];
+        }
 
         function syncStoredList(storageKey, list, removedIds = []) {
-            const baseKey = storageKey.replace(/::[^:]+$/, '');
-            const table = storageKey === lojasStorageKey ? 'lojas' : storageKey === usuariosStorageKey ? 'perfis' : databaseTableByStorageKey[baseKey];
+            const table = tableForStorageKey(storageKey);
             if (!table) return;
             const pending = pendingSupabaseSyncs.get(storageKey) || { list: [], removedIds: [], timer: null };
             pending.list = list;
             pending.removedIds = [...new Set([...pending.removedIds, ...removedIds])];
+            savePendingSupabaseSync(storageKey, pending);
             window.clearTimeout(pending.timer);
             pending.timer = window.setTimeout(() => flushSupabaseSync(storageKey, table), 350);
             pendingSupabaseSyncs.set(storageKey, pending);
@@ -813,15 +835,36 @@
                 ? [...new Map(syncableList.map(item => [`${item.type}\u0000${item.text}`, item])).values()]
                 : syncableList;
             const rows = uniqueList.map(item => table === 'lojas' ? { id: item.id, nome: item.name, slug: item.slug, configuracoes: item.configuracoes || {}, created_at: item.createdAt } : table === 'perfis' ? { id: item.id, loja_id: item.lojaId, nome: item.name, cargo: item.role, username: item.username, slug: item.slug, full_slug: item.fullSlug, created_at: item.createdAt } : databaseRowFromApp(table, item, scopedUserId));
-            if (!rows.length) return;
+            if (!rows.length) { clearPendingSupabaseSync(storageKey); return; }
             const { error } = table === 'conteudos'
                 ? await sigaSupabase.from(table).upsert(rows, { onConflict: 'tipo,texto' })
                 : await sigaSupabase.from(table).upsert(rows);
             if (error) {
+                pendingSupabaseSyncs.set(storageKey, { ...pending, timer: null });
+                savePendingSupabaseSync(storageKey, pending);
                 console.warn(`Falha ao sincronizar ${table}:`, error.message);
-                showToast(`Dados mantidos neste dispositivo. Sincronização pendente em ${table}.`, 'error');
+                showToast(`Sincronização pendente em ${table}: ${error.message}`, 'error');
+                return;
             }
+            clearPendingSupabaseSync(storageKey);
+            showToast(`Dados sincronizados em ${table}.`);
         }
+
+        function retryPendingSupabaseSyncs() {
+            Object.entries(getPendingSupabaseSyncs()).forEach(([storageKey, pending]) => {
+                const table = tableForStorageKey(storageKey);
+                if (!table) return;
+                pendingSupabaseSyncs.set(storageKey, { ...pending, timer: null });
+                flushSupabaseSync(storageKey, table);
+            });
+        }
+
+        window.addEventListener('online', () => {
+            pendingSupabaseSyncs.forEach((pending, storageKey) => {
+                window.clearTimeout(pending.timer);
+                pending.timer = window.setTimeout(() => flushSupabaseSync(storageKey, tableForStorageKey(storageKey)), 0);
+            });
+        });
 
         function isSupabaseUuid(value) {
             return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
@@ -1015,12 +1058,15 @@
             pending?.resolve(result);
         }
 
-        function openSiteDialog({ title, message, input = false, value = '', confirmLabel = 'Confirmar' }) {
+        function openSiteDialog({ title, message, input = false, value = '', confirmLabel = 'Confirmar', altLabel = '' }) {
             const dialog = document.getElementById('site-dialog');
             const inputElement = document.getElementById('site-dialog-input');
+            const altButton = document.getElementById('site-dialog-alt');
             document.getElementById('site-dialog-title').textContent = title;
             document.getElementById('site-dialog-message').textContent = message;
             document.getElementById('site-dialog-confirm').textContent = confirmLabel;
+            altButton.textContent = altLabel;
+            altButton.classList.toggle('hidden', !altLabel);
             inputElement.classList.toggle('hidden', !input);
             inputElement.value = value;
             dialog.classList.add('is-open');
@@ -1038,11 +1084,16 @@
             return result === null ? null : result;
         }
 
+        function siteChoice(message, primaryLabel, secondaryLabel, title = 'Escolha uma opção') {
+            return openSiteDialog({ title, message, confirmLabel: primaryLabel, altLabel: secondaryLabel });
+        }
+
         document.getElementById('site-dialog-cancel').addEventListener('click', () => closeSiteDialog(null));
         document.getElementById('site-dialog-confirm').addEventListener('click', () => {
             const input = document.getElementById('site-dialog-input');
             closeSiteDialog(activeSiteDialog?.input ? input.value : true);
         });
+        document.getElementById('site-dialog-alt').addEventListener('click', () => closeSiteDialog(false));
         document.getElementById('site-dialog').addEventListener('click', event => {
             if (event.target.id === 'site-dialog') closeSiteDialog(null);
         });
@@ -2330,6 +2381,7 @@
             if (data.session && getSession()?.type === 'master') saveSession({ type: 'master' });
             if (getSession()?.type === 'master') await removeDemoStoresFromSupabase();
             await hydrateFromSupabase();
+            retryPendingSupabaseSyncs();
             pruneExpiredProjectData();
             ensureDefaultMoodContents();
             if (getSession()?.type === 'user' && getSession()?.role === 'gerente' && location.hash === '#manager-goals') {
@@ -2531,6 +2583,7 @@
         }
 
         let currentSelectedDate = getLocalDateKey();
+        let pendingAddDate = null;
         let managerOverviewSelectedDate = getLocalDateKey();
         let managerOverviewVendorFilter = 'all';
 
@@ -2948,14 +3001,14 @@
             return conditional;
         }
 
-        function openConditionalModal(conditional = null) {
+        function openConditionalModal(conditional = null, selectedDate = null) {
             editingConditionalId = conditional?.id || null;
             document.getElementById('conditional-form').reset();
             document.getElementById('conditional-client').value = conditional?.client || '';
             document.getElementById('conditional-phone').value = conditional?.phone || '';
             document.getElementById('conditional-observation').value = conditional?.observation || '';
             const linkedTask = conditional?.taskId ? getTasks().find(item => item.id === conditional.taskId) : null;
-            document.getElementById('conditional-task-date').value = linkedTask?.date || suggestedConditionalTaskDate();
+            document.getElementById('conditional-task-date').value = linkedTask?.date || selectedDate || suggestedConditionalTaskDate();
             document.getElementById('conditional-task-time').value = linkedTask?.time || '10:00';
             document.getElementById('conditional-product-feedback').textContent = '';
             renderProductOptionsInto('conditional-product-options', conditional?.products || []);
@@ -2966,6 +3019,7 @@
 
         function closeConditionalModal() {
             editingConditionalId = null;
+            pendingAddDate = null;
             const modal = document.getElementById('conditional-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
@@ -2973,7 +3027,7 @@
 
         function showServicePeriod(period) { servicePeriod = period; document.querySelectorAll('.service-period-button').forEach(button => { const active = button.dataset.servicePeriod === period; button.classList.toggle('bg-white', active); button.classList.toggle('text-indigo-600', active); }); document.getElementById('service-week-range').classList.toggle('hidden', period !== 'week'); renderServices(); }
 
-        function openServiceModal(service = null) {
+        function openServiceModal(service = null, selectedDate = null) {
             editingServiceId = service?.id || null;
             document.getElementById('service-form').reset();
             document.getElementById('service-outcome').value = service?.outcome || '';
@@ -2984,7 +3038,7 @@
             const linkedConditional = service?.conditionalId ? getConditionals().find(item => item.id === service.conditionalId) : null;
             const linkedConditionalTask = linkedConditional?.taskId ? getTasks().find(item => item.id === linkedConditional.taskId) : null;
             document.getElementById('service-phone').value = linkedConditional?.phone || '';
-            document.getElementById('service-conditional-task-date').value = linkedConditionalTask?.date || suggestedConditionalTaskDate();
+            document.getElementById('service-conditional-task-date').value = linkedConditionalTask?.date || selectedDate || suggestedConditionalTaskDate();
             document.getElementById('service-conditional-task-time').value = linkedConditionalTask?.time || '10:00';
             document.getElementById('service-conditional-product-feedback').textContent = '';
             const outcomeCards = document.getElementById('service-outcome-cards');
@@ -2999,7 +3053,7 @@
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
-        function closeServiceModal() { editingServiceId = null; const modal = document.getElementById('service-modal'); modal.classList.add('hidden'); modal.classList.remove('flex'); }
+        function closeServiceModal() { editingServiceId = null; pendingAddDate = null; const modal = document.getElementById('service-modal'); modal.classList.add('hidden'); modal.classList.remove('flex'); }
         function updateServiceFields() {
             const outcome = document.getElementById('service-outcome').value;
             const converted = outcome === 'converted';
@@ -3041,7 +3095,7 @@
             updateServiceFields();
         }
 
-        function openNewSaleModal() {
+        function openNewSaleModal(selectedDate = null) {
             editingSaleId = null;
             document.getElementById('new-sale-form').reset();
             document.getElementById('sale-product-feedback').textContent = '';
@@ -3050,7 +3104,8 @@
             modal.classList.add('flex');
             const now = new Date();
             now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            document.getElementById('sale-datetime-input').value = now.toISOString().slice(0, 16);
+            const dateValue = selectedDate || getLocalDateKey();
+            document.getElementById('sale-datetime-input').value = `${dateValue}T${now.toISOString().slice(11, 16)}`;
             document.getElementById('sale-value-input').focus();
             renderSaleProductOptions();
         }
@@ -3068,6 +3123,7 @@
 
         function closeNewSaleModal() {
             editingSaleId = null;
+            pendingAddDate = null;
             const modal = document.getElementById('new-sale-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
@@ -3154,7 +3210,8 @@
             window.setInterval(checkTaskNotifications, 15000);
         }
 
-        function openNewTaskModal() {
+        function openNewTaskModal(selectedDate = null) {
+            pendingAddDate = selectedDate || pendingAddDate;
             document.getElementById('new-task-modal').classList.remove('hidden');
             document.getElementById('new-task-modal').classList.add('flex');
             document.getElementById('new-task-title-input').focus();
@@ -3164,6 +3221,7 @@
             document.getElementById('new-task-modal').classList.add('hidden');
             document.getElementById('new-task-modal').classList.remove('flex');
             managerEditingTask = null;
+            pendingAddDate = null;
             document.getElementById('new-task-title').textContent = 'Adicionar tarefa';
         }
 
@@ -3204,15 +3262,21 @@
                     showPage('tasks');
                 }
             });
-            document.getElementById('fab-button').addEventListener('click', () => {
+            document.getElementById('fab-button').addEventListener('click', async () => {
                 const tasksPage = document.getElementById('tasks-page');
                 const salesPage = document.getElementById('sales-page');
                 const servicePage = document.getElementById('service-page');
                 const conditionalPage = document.getElementById('conditional-page');
-                if (tasksPage.classList.contains('active')) openNewTaskModal();
-                else if (!salesPage.classList.contains('hidden')) openNewSaleModal();
-                else if (!conditionalPage.classList.contains('hidden')) openConditionalModal();
-                else openServiceModal();
+                const page = tasksPage.classList.contains('active') ? 'tasks' : !salesPage.classList.contains('hidden') ? 'sales' : !conditionalPage.classList.contains('hidden') ? 'conditional' : 'service';
+                const selectedDate = page === 'tasks' ? currentSelectedDate : page === 'sales' ? salesSelectedDate : page === 'conditional' ? serviceSelectedDate : serviceSelectedDate;
+                const today = getLocalDateKey();
+                const useSelectedDate = await siteChoice(`Deseja salvar este registro em ${new Date(`${selectedDate}T12:00:00`).toLocaleDateString('pt-BR')} ou usar a data de hoje (${new Date(`${today}T12:00:00`).toLocaleDateString('pt-BR')})?`, 'Usar data selecionada', 'Usar hoje', 'Data do registro');
+                if (useSelectedDate === null) return;
+                pendingAddDate = useSelectedDate ? selectedDate : today;
+                if (page === 'tasks') openNewTaskModal(pendingAddDate);
+                else if (page === 'sales') openNewSaleModal(pendingAddDate);
+                else if (page === 'conditional') openConditionalModal(null, pendingAddDate);
+                else openServiceModal(null, pendingAddDate);
             });
             document.getElementById('close-new-task').addEventListener('click', closeNewTaskModal);
             document.getElementById('cancel-new-task').addEventListener('click', closeNewTaskModal);
@@ -3240,9 +3304,11 @@
                 const repeatEnabled = document.getElementById('task-repeat-toggle').checked;
                 const repeatDays = Array.from(document.querySelectorAll('.task-repeat-day:checked')).map(input => Number(input.value));
                 const tasks = getTasks();
-                const newTasks = repeatEnabled && repeatDays.length ? createRecurringTasks(title, time, currentSelectedDate, repeatDays) : [{ id: crypto.randomUUID(), title, time, owner: currentTaskOwnerRole(), completed: false, observation: '', date: currentSelectedDate }];
+                const taskDate = pendingAddDate || currentSelectedDate;
+                const newTasks = repeatEnabled && repeatDays.length ? createRecurringTasks(title, time, taskDate, repeatDays) : [{ id: crypto.randomUUID(), title, time, owner: currentTaskOwnerRole(), completed: false, observation: '', date: taskDate }];
                 tasks.push(...newTasks);
                 saveTasks(tasks);
+                pendingAddDate = null;
                 event.target.reset();
                 document.getElementById('task-repeat-options').classList.add('hidden');
                 closeNewTaskModal();
@@ -3289,9 +3355,12 @@
                     return;
                 }
                 const sales = getSales();
-                const sale = { id: editingSaleId || crypto.randomUUID(), client: document.getElementById('sale-client-input').value.trim(), value, datetime, date: datetime.slice(0, 10), products };
+                const selectedSaleDate = pendingAddDate || datetime.slice(0, 10);
+                const saleDatetime = editingSaleId ? datetime : `${selectedSaleDate}T${datetime.slice(11, 16)}`;
+                const sale = { id: editingSaleId || crypto.randomUUID(), client: document.getElementById('sale-client-input').value.trim(), value, datetime: saleDatetime, date: saleDatetime.slice(0, 10), products };
                 const updatedSales = editingSaleId ? sales.map(item => item.id === editingSaleId ? sale : item) : [...sales, sale];
                 saveSales(updatedSales);
+                pendingAddDate = null;
                 event.target.reset();
                 closeNewSaleModal();
                 renderSales();
@@ -3310,12 +3379,13 @@
                 if (isConditional && !phone) return showToast('Informe o telefone do cliente para a condicional.');
                 if (isConditional && !conditionalProducts.length) { document.getElementById('service-conditional-product-feedback').textContent = 'Escolha pelo menos um produto.'; return; }
                 if (isConditional && (!conditionalTaskDate || !conditionalTaskTime)) return showToast('Escolha a data e o horário da tarefa de cobrança.');
-                const previousService = editingServiceId ? getServices().find(item => item.id === editingServiceId) : null; const existingSaleId = previousService?.saleId; const existingConditionalId = previousService?.conditionalId; const now = new Date(); const datetime = previousService?.datetime || now.toISOString(); const labels = { converted: 'Venda realizada', conditional: 'Levou condicional', authorized: 'Venda permitida / aguardando fechamento', 'no-product': 'Não tínhamos o produto', 'just-looking': 'Só estava olhando', expensive: 'Achou caro', 'no-decision': 'Não tomou decisão', competitor: 'Preferiu a concorrência', 'return-later': 'Vai voltar depois', other: 'Outro motivo' };
+                const previousService = editingServiceId ? getServices().find(item => item.id === editingServiceId) : null; const existingSaleId = previousService?.saleId; const existingConditionalId = previousService?.conditionalId; const now = new Date(); const serviceDate = pendingAddDate || getLocalDateKey(); const datetime = previousService?.datetime || `${serviceDate}T${now.toTimeString().slice(0, 8)}`; const labels = { converted: 'Venda realizada', conditional: 'Levou condicional', authorized: 'Venda permitida / aguardando fechamento', 'no-product': 'Não tínhamos o produto', 'just-looking': 'Só estava olhando', expensive: 'Achou caro', 'no-decision': 'Não tomou decisão', competitor: 'Preferiu a concorrência', 'return-later': 'Vai voltar depois', other: 'Outro motivo' };
                 const client = document.getElementById('service-client').value.trim();
                 const service = { id: editingServiceId || crypto.randomUUID(), client, outcome, outcomeLabel: labels[outcome], value: converted ? value : 0, products: converted ? products : (isConditional ? conditionalProducts : []), shownProducts: (!converted && !isConditional) ? shownProducts : [], demand: document.getElementById('service-demand').value.trim(), notes: document.getElementById('service-notes').value.trim(), datetime, date: datetime.slice(0, 10), saleId: existingSaleId, conditionalId: existingConditionalId };
                 const services = getServices(); saveServices(editingServiceId ? services.map(item => item.id === editingServiceId ? service : item) : [...services, service]);
                 if (converted) { const sales = getSales(); const sale = { id: existingSaleId || crypto.randomUUID(), client, value, datetime, date: service.date, products }; saveSales(existingSaleId ? sales.map(item => item.id === existingSaleId ? sale : item) : [...sales, sale]); service.saleId = sale.id; saveServices(getServices().map(item => item.id === service.id ? service : item)); } else if (existingSaleId) saveSales(getSales().filter(item => item.id !== existingSaleId));
                 if (isConditional) { const conditional = upsertConditionalRecord({ id: existingConditionalId, client, phone, products: conditionalProducts, observation: service.notes, taskDate: conditionalTaskDate, taskTime: conditionalTaskTime }); service.conditionalId = conditional.id; saveServices(getServices().map(item => item.id === service.id ? service : item)); } else if (existingConditionalId) { const conditional = getConditionals().find(item => item.id === existingConditionalId); saveConditionals(getConditionals().filter(item => item.id !== existingConditionalId)); if (conditional?.taskId) saveTasks(getTasks().filter(item => item.id !== conditional.taskId)); renderConditionals(); renderDashboardConditionals(); }
+                pendingAddDate = null;
                 closeServiceModal(); renderServices(); renderSales(); renderDashboardServices(); renderConditionals(); renderDashboardConditionals(); refreshTaskViews();
             });
             document.getElementById('conditional-product-options').addEventListener('click', event => { const card = event.target.closest('[data-sale-product]'); if (!card || event.target.closest('select')) return; const selected = card.classList.toggle('border-indigo-500'); card.classList.toggle('bg-indigo-50', selected); card.classList.toggle('border-slate-200', !selected); renderProductOptionsInto('conditional-product-options', getSelectedSaleProducts('conditional-product-options')); });
@@ -3329,6 +3399,7 @@
                 if (!products.length) { document.getElementById('conditional-product-feedback').textContent = 'Escolha pelo menos um produto.'; return; }
                 if (!taskDate || !taskTime) return showToast('Escolha a data e o horário da tarefa de cobrança.');
                 upsertConditionalRecord({ id: editingConditionalId, client, phone, products, observation: document.getElementById('conditional-observation').value.trim(), taskDate, taskTime });
+                pendingAddDate = null;
                 closeConditionalModal();
                 renderConditionals();
                 renderDashboardConditionals();
