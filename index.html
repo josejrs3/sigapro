@@ -61,7 +61,7 @@
         .mobile-collapsible-summary::-webkit-details-marker { display: none; }
         .mobile-collapsible-summary::after { content: '+'; float: right; font-size: 1.25rem; line-height: 1; color: #94a3b8; }
         details[open] > .mobile-collapsible-summary::after { content: '-'; }
-        #mood-card { min-height: 11rem; }
+        #mood-card { min-height: 0; }
         #mood-card .mood-option { min-height: 3.5rem; }
         #goal-markers button { max-width: 4.75rem; }
         #goal-markers button span:last-child { overflow: hidden; text-overflow: ellipsis; }
@@ -256,7 +256,20 @@
     </header>
 
     <main id="dashboard-page" class="max-w-5xl mx-auto p-4 space-y-6">
-        
+        <section id="mood-card" class="bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm transition-all">
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><i data-lucide="smile" class="w-4 h-4 text-orange-400"></i>Humor de hoje</p>
+                <button id="toggle-mood-history" type="button" aria-expanded="false" aria-controls="mood-history" aria-label="Expandir registro de humor" class="w-8 h-8 shrink-0 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors"><i data-lucide="plus" class="w-4 h-4"></i></button>
+            </div>
+            <p id="mood-selected-label" class="hidden mt-3 text-xs text-slate-500">Humor de hoje não registrado</p>
+            <div id="mood-options" class="hidden mt-3" role="group" aria-label="Escolha seu humor de hoje"></div>
+            <div id="mood-history" class="hidden mt-4 border-t border-slate-100 pt-4" aria-hidden="true">
+                <div class="flex items-center justify-between mb-3"><div><h4 class="text-sm font-bold text-slate-800">Últimos 30 dias</h4><p class="text-[10px] text-slate-400">Clique apenas em hoje para alterar</p></div><span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Calendário</span></div>
+                <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-bold uppercase text-slate-400 mb-1"><span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span></div>
+                <div id="mood-calendar" class="grid grid-cols-7 gap-1"></div>
+            </div>
+        </section>
+
         <!-- FRASE DO DIA -->
         <section class="py-4 text-center">
             <p class="text-lg md:text-xl font-semibold text-slate-700 italic leading-relaxed">
@@ -372,33 +385,6 @@
                 <div id="dashboard-sales-list" class="divide-y divide-slate-50"></div>
             </div>
 
-            <div id="mood-card" class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm transition-all">
-                <div class="flex items-start justify-between gap-3 mb-4">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <i data-lucide="smile" class="w-4 h-4 text-orange-400"></i>
-                        Registro de Humor
-                    </p>
-                    <button id="toggle-mood-history" type="button" aria-expanded="false" aria-controls="mood-history" aria-label="Mostrar histórico de humor" class="w-8 h-8 shrink-0 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-indigo-100 hover:text-indigo-600 transition-colors">
-                        <i data-lucide="plus" class="w-4 h-4"></i>
-                    </button>
-                </div>
-                <p id="mood-selected-label" class="text-xs text-slate-500 mb-3">Como você está hoje?</p>
-                <div id="mood-options" class="hidden" role="group" aria-label="Escolha seu humor de hoje"></div>
-
-                <div id="mood-history" class="hidden mt-5 border-t border-slate-100 pt-5" aria-hidden="true">
-                    <div class="flex items-center justify-between mb-3">
-                        <div>
-                            <h4 class="text-sm font-bold text-slate-800">Últimos 30 dias</h4>
-                            <p class="text-[10px] text-slate-400">Clique apenas em hoje para alterar</p>
-                        </div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Calendário</span>
-                    </div>
-                    <div class="grid grid-cols-7 gap-1 text-center text-[9px] font-bold uppercase text-slate-400 mb-1">
-                        <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
-                    </div>
-                    <div id="mood-calendar" class="grid grid-cols-7 gap-1"></div>
-                </div>
-            </div>
         </div>
 
         <section class="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
@@ -874,6 +860,11 @@
             if (!rows.length) { clearPendingSupabaseSync(storageKey); return; }
             const dependencyError = await ensureSyncDependencies(table, rows);
             if (dependencyError) {
+                if (dependencyError.orphanedScope && dependencyError.missingProfileIds?.includes(scopedUserId)) {
+                    writeStoredList(storageKey, []);
+                    clearPendingSupabaseSync(storageKey);
+                    return;
+                }
                 pendingSupabaseSyncs.set(storageKey, { ...pending, timer: null });
                 savePendingSupabaseSync(storageKey, pending);
                 console.warn(`Sincronização de ${table} aguardando dependências:`, dependencyError.message);
@@ -931,7 +922,13 @@
                 if (error) return error;
                 const existingIds = new Set((data || []).map(profile => profile.id));
                 const missingIds = profileIds.filter(profileId => !existingIds.has(profileId));
-                if (missingIds.length) return new Error(`Há vendedor(es) removido(s) vinculados a ${table}. Atualize a tela e tente novamente.`);
+                if (missingIds.length) {
+                    const orphanedScope = rows.every(row => missingIds.includes(row.vendedor_id || row.responsavel_id));
+                    const error = new Error(`Há vendedor(es) removido(s) vinculados a ${table}.`);
+                    error.orphanedScope = orphanedScope;
+                    error.missingProfileIds = missingIds;
+                    return error;
+                }
             }
 
             if (table === 'metas_semanais') {
@@ -3965,7 +3962,10 @@
 
         function updateMoodLabel() {
             const mood = getMood(selectedMoodId);
-            document.getElementById('mood-selected-label').textContent = mood ? `Humor de hoje: ${mood.emoji} ${mood.label}` : 'Humor de hoje não registrado';
+            const historyOpen = !document.getElementById('mood-history').classList.contains('hidden');
+            const label = document.getElementById('mood-selected-label');
+            label.textContent = mood ? `Humor de hoje: ${mood.emoji} ${mood.label}` : 'Humor de hoje não registrado';
+            label.classList.toggle('hidden', !historyOpen);
         }
 
         function renderMoodCalendar() {
@@ -4023,10 +4023,12 @@
             document.getElementById('toggle-mood-history').addEventListener('click', event => {
                 const history = document.getElementById('mood-history');
                 const expanded = history.classList.toggle('hidden') === false;
+                document.getElementById('mood-options').classList.toggle('hidden', !expanded);
                 history.setAttribute('aria-hidden', String(!expanded));
                 event.currentTarget.setAttribute('aria-expanded', String(expanded));
                 event.currentTarget.setAttribute('aria-label', expanded ? 'Ocultar histórico de humor' : 'Mostrar histórico de humor');
                 event.currentTarget.innerHTML = `<i data-lucide="${expanded ? 'minus' : 'plus'}" class="w-4 h-4"></i>`;
+                updateMoodLabel();
                 lucide.createIcons();
             });
         }
