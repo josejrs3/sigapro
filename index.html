@@ -831,7 +831,13 @@
             const validRemovedIds = pending.removedIds.filter(isSupabaseUuid);
             if (validRemovedIds.length) {
                 const { error: deleteError } = await sigaSupabase.from(table).delete().in('id', validRemovedIds);
-                if (deleteError) console.warn(`Falha ao excluir de ${table}:`, deleteError.message);
+                if (deleteError) {
+                    pendingSupabaseSyncs.set(storageKey, { ...pending, timer: null });
+                    savePendingSupabaseSync(storageKey, pending);
+                    console.warn(`Falha ao excluir de ${table}:`, deleteError.message);
+                    showToast(`Não foi possível excluir de ${table}: ${deleteError.message}`, 'error');
+                    return;
+                }
             }
             const scopedUserId = storageKey.match(/::([^:]+)$/)?.[1] || null;
             const syncableList = table === 'tarefas' ? pending.list.filter(item => isSupabaseUuid(item.id)) : pending.list;
@@ -933,7 +939,9 @@
                     else if (value) writeStoredList(`${storageKey}::${value}`, []);
                 }
                 const sanitizedList = table === 'lojas' ? list.filter(store => !isDemoStore(store)) : list;
-                if (sanitizedList.length) {
+                if (table === 'lojas' || table === 'perfis') {
+                    writeStoredList(storageKey, sanitizedList);
+                } else if (sanitizedList.length) {
                     const scopedTables = new Set(['tarefas', 'vendas', 'atendimentos', 'condicionais', 'vendas_loja']);
                     if (scopedTables.has(table)) {
                         const groups = sanitizedList.reduce((result, item) => {
@@ -2344,6 +2352,8 @@
                     const lojaId = deleteLojaButton.dataset.deleteLoja;
                     saveLojas(getLojas().filter(item => item.id !== lojaId));
                     saveUsuarios(getUsuarios().filter(item => item.lojaId !== lojaId));
+                    await flushSupabaseSync(usuariosStorageKey, 'perfis');
+                    await flushSupabaseSync(lojasStorageKey, 'lojas');
                     if (selectedLojaId === lojaId) { selectedLojaId = null; document.getElementById('loja-team-section').classList.add('hidden'); }
                     renderMasterPanel();
                     return;
@@ -2365,7 +2375,9 @@
                 const deleteUsuarioButton = event.target.closest('[data-delete-usuario]');
                 if (deleteUsuarioButton) {
                     if (!(await siteConfirm('Excluir este acesso?'))) return;
-                    saveUsuarios(getUsuarios().filter(item => item.id !== deleteUsuarioButton.dataset.deleteUsuario));
+                    const updatedUsers = getUsuarios().filter(item => item.id !== deleteUsuarioButton.dataset.deleteUsuario);
+                    saveUsuarios(updatedUsers);
+                    await flushSupabaseSync(usuariosStorageKey, 'perfis');
                     renderMasterPanel();
                     return;
                 }
