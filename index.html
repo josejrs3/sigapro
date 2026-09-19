@@ -766,6 +766,8 @@
                 error.code = 'AUTH_SESSION_MISSING';
                 throw error;
             }
+            const dependencyError = await ensureSyncDependencies('perfis', [{ loja_id: profile.lojaId }]);
+            if (dependencyError) throw dependencyError;
             const { error } = await sigaSupabase.rpc('admin_save_profile', {
                 p_id: profile.id,
                 p_loja_id: profile.lojaId,
@@ -846,22 +848,13 @@
                 : syncableList;
             const rows = uniqueList.map(item => table === 'lojas' ? { id: item.id, nome: item.name, slug: item.slug, configuracoes: item.configuracoes || {}, created_at: item.createdAt } : table === 'perfis' ? { id: item.id, loja_id: item.lojaId, nome: item.name, cargo: item.role, username: item.username, slug: item.slug, full_slug: item.fullSlug, created_at: item.createdAt } : databaseRowFromApp(table, item, scopedUserId));
             if (!rows.length) { clearPendingSupabaseSync(storageKey); return; }
-            if (table === 'tarefas') {
-                const lojaIds = [...new Set(rows.map(row => row.loja_id).filter(Boolean))];
-                const stores = getLojas().filter(store => lojaIds.includes(store.id));
-                if (!lojaIds.length || stores.length !== lojaIds.length) {
-                    pendingSupabaseSyncs.set(storageKey, { ...pending, timer: null });
-                    savePendingSupabaseSync(storageKey, pending);
-                    console.warn(`Sincronização de tarefas aguardando loja válida: ${storageKey}`);
-                    return;
-                }
-                const { error: storeError } = await sigaSupabase.from('lojas').upsert(stores.map(store => ({ id: store.id, nome: store.name, slug: store.slug, configuracoes: store.configuracoes || {}, created_at: store.createdAt })));
-                if (storeError) {
-                    pendingSupabaseSyncs.set(storageKey, { ...pending, timer: null });
-                    savePendingSupabaseSync(storageKey, pending);
-                    console.warn('Falha ao preparar loja para sincronizar tarefas:', storeError.message);
-                    return;
-                }
+            const dependencyError = await ensureSyncDependencies(table, rows);
+            if (dependencyError) {
+                pendingSupabaseSyncs.set(storageKey, { ...pending, timer: null });
+                savePendingSupabaseSync(storageKey, pending);
+                console.warn(`Sincronização de ${table} aguardando dependências:`, dependencyError.message);
+                showToast(`Sincronização pendente em ${table}: ${dependencyError.message}`, 'error');
+                return;
             }
             const { error } = table === 'conteudos'
                 ? await sigaSupabase.from(table).upsert(rows, { onConflict: 'tipo,texto' })
@@ -894,6 +887,37 @@
 
         function isSupabaseUuid(value) {
             return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+        }
+
+        async function ensureSyncDependencies(table, rows) {
+            if (table === 'lojas' || !rows.length) return null;
+            const storeIds = [...new Set(rows.map(row => row.loja_id).filter(Boolean))];
+            if (storeIds.some(storeId => !isSupabaseUuid(storeId))) return new Error(`A loja vinculada a ${table} não possui um ID válido.`);
+            if (storeIds.length) {
+                const stores = getLojas().filter(store => storeIds.includes(store.id));
+                if (stores.length !== storeIds.length) return new Error(`A loja vinculada a ${table} não foi encontrada neste dispositivo.`);
+                const { error } = await sigaSupabase.from('lojas').upsert(stores.map(store => ({ id: store.id, nome: store.name, slug: store.slug, configuracoes: store.configuracoes || {}, created_at: store.createdAt })));
+                if (error) return error;
+            }
+
+            if (table === 'perfis') return null;
+            const profileIds = [...new Set(rows.flatMap(row => [row.vendedor_id, row.responsavel_id]).filter(Boolean))];
+            if (profileIds.length) {
+                const { data, error } = await sigaSupabase.from('perfis').select('id').in('id', profileIds);
+                if (error) return error;
+                const existingIds = new Set((data || []).map(profile => profile.id));
+                const missingIds = profileIds.filter(profileId => !existingIds.has(profileId));
+                if (missingIds.length) return new Error(`Há vendedor(es) removido(s) vinculados a ${table}. Atualize a tela e tente novamente.`);
+            }
+
+            if (table === 'metas_semanais') {
+                const monthlyIds = [...new Set(rows.map(row => row.meta_mensal_id).filter(Boolean))];
+                const monthlyGoals = getMonthlyGoals().filter(goal => monthlyIds.includes(goal.id));
+                if (monthlyGoals.length !== monthlyIds.length) return new Error('A meta mensal selecionada não foi encontrada. Recarregue a página e tente novamente.');
+                const { error } = await sigaSupabase.from('metas_mensais').upsert(monthlyGoals.map(goal => ({ id: goal.id, loja_id: goal.lojaId, mes_referencia: `${goal.month}-01`, valor_total: goal.total })));
+                if (error) return error;
+            }
+            return null;
         }
 
         let lastSupabaseHydration = 0;
