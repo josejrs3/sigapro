@@ -171,10 +171,13 @@
                     <input type="hidden" id="content-editing-id">
                     <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Tipo<select id="content-type-input" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold outline-none"><option value="frase">Frase</option><option value="dica">Dica de venda</option></select></label>
                     <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Humor ideal<select id="content-mood-input" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold outline-none"><option value="">Todos os humores</option><option value="muito-mal">Muito mal</option><option value="mal">Mal</option><option value="normal">Normal</option><option value="bem">Bem</option><option value="excelente">Excelente</option><option value="energizado">Energizado</option></select></label>
-                    <label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Autor (opcional)<input id="content-author-input" maxlength="120" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none"></label>
                     <label class="text-[10px] font-black uppercase tracking-wider text-slate-400 sm:col-span-2">Texto<textarea id="content-text-input" required maxlength="500" rows="3" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none"></textarea></label>
                     <div class="flex justify-end gap-2 sm:col-span-2"><button type="button" id="cancel-content-edit" class="hidden rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500">Cancelar</button><button type="submit" class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white">Salvar conteúdo</button></div>
                 </form>
+                <div class="mt-6 grid gap-4 md:grid-cols-2">
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div class="flex items-center justify-between gap-2"><h3 class="text-xs font-black uppercase tracking-wider text-slate-700">Importar frases via JSON</h3><button type="button" id="copy-phrase-json-template" class="rounded-lg bg-white px-3 py-2 text-[10px] font-black text-indigo-600 shadow-sm">Copiar modelo</button></div><textarea id="phrase-json-input" rows="5" placeholder='[{"texto":"Sua frase aqui","humor":""}]' class="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-xs outline-none"></textarea><button type="button" id="import-phrase-json" class="mt-2 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-black text-white">Importar frases</button></div>
+                    <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div class="flex items-center justify-between gap-2"><h3 class="text-xs font-black uppercase tracking-wider text-slate-700">Importar dicas via JSON</h3><button type="button" id="copy-tip-json-template" class="rounded-lg bg-white px-3 py-2 text-[10px] font-black text-indigo-600 shadow-sm">Copiar modelo</button></div><textarea id="tip-json-input" rows="5" placeholder='[{"texto":"Sua dica aqui"}]' class="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-xs outline-none"></textarea><button type="button" id="import-tip-json" class="mt-2 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-black text-white">Importar dicas</button></div>
+                </div>
                 <div class="mt-6 grid gap-4 md:grid-cols-2"><div><h3 class="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Frases</h3><div id="phrase-list" class="space-y-2"></div></div><div><h3 class="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Dicas de venda</h3><div id="tip-list" class="space-y-2"></div></div></div>
             </section>
 
@@ -259,7 +262,6 @@
             <p class="text-lg md:text-xl font-semibold text-slate-700 italic leading-relaxed">
                 <span id="daily-phrase-text">"Grandes batalhas só são dadas a grandes guerreiros."</span>
             </p>
-            <p id="daily-phrase-author" class="text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em] mt-2">— Autor Desconhecido</p>
         </section>
 
         <!-- SELETOR DE PERÍODO -->
@@ -752,7 +754,7 @@
             if (table === 'atendimentos') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client || '', resultado: item.outcome, resultado_label: item.outcomeLabel || '', valor: item.value || 0, telefone: item.phone || '', observacao: item.notes || '', produtos: item.products || [], produtos_apresentados: item.shownProducts || [], demanda: item.demand || '', venda_id: item.saleId || null, condicional_id: item.conditionalId || null, data_hora: item.datetime || item.dateTime };
             if (table === 'condicionais') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client, telefone: item.phone, observacao: item.observation || '', produtos: item.products || [], prazo: item.dueDate || null, status: item.status || 'aberta', task_id: item.taskId || null, created_at: item.createdAt };
             if (table === 'metas') return { id: item.id, loja_id: item.lojaId, vendedor_id: item.userId, semana_inicio: item.weekStart, semana_fim: item.weekEnd, bronze: item.bronze, prata: item.silver, ouro: item.gold, diamante: item.diamond, mes_referencia: `${item.month}-01`, mensal_bronze: item.monthlyBronze, mensal_prata: item.monthlySilver, mensal_ouro: item.monthlyGold, mensal_diamante: item.monthlyDiamond, meta_mensal: item.monthlyDiamond };
-            if (table === 'conteudos') return { id: item.id, tipo: item.type, texto: item.text, autor: item.author || '', humor: item.mood || null, ativo: item.active !== false };
+            if (table === 'conteudos') return { id: item.id, tipo: item.type, texto: item.text, humor: item.mood || null, ativo: item.active !== false };
             if (table === 'metas_mensais') return { id: item.id, loja_id: item.lojaId, mes_referencia: `${item.month}-01`, valor_total: item.total };
             if (table === 'metas_semanais') return { id: item.id, loja_id: item.lojaId, meta_mensal_id: item.monthlyGoalId, nome: item.name, semana_inicio: item.weekStart, semana_fim: item.weekEnd, valor_total: item.total, distribuicao: item.distributions || [] };
             if (table === 'vendas_loja') return { id: item.id, loja_id: item.lojaId || getSession()?.lojaId || null, descricao: item.client || '', valor: Number(item.value || 0), data: item.date };
@@ -767,7 +769,7 @@
             if (table === 'atendimentos') { const datetime = row.data_hora ?? row.datetime; return { ...row, userId: row.vendedor_id ?? row.userId, client: row.cliente ?? row.client ?? '', outcome: row.resultado ?? row.outcome, outcomeLabel: row.resultado_label ?? row.outcomeLabel, value: row.valor ?? row.value ?? 0, phone: row.telefone ?? row.phone ?? '', notes: row.observacao ?? row.notes ?? '', products: row.produtos ?? row.products ?? [], shownProducts: row.produtos_apresentados ?? row.shownProducts ?? [], demand: row.demanda ?? row.demand ?? '', saleId: row.venda_id ?? row.saleId, conditionalId: row.condicional_id ?? row.conditionalId, datetime, date: row.data ?? row.date ?? String(datetime || '').slice(0, 10) }; }
             if (table === 'condicionais') return { ...row, userId: row.vendedor_id ?? row.userId, client: row.cliente ?? row.client, phone: row.telefone ?? row.phone, observation: row.observacao ?? row.observation ?? '', products: row.produtos ?? row.products ?? [], dueDate: row.prazo ?? row.dueDate, status: row.status ?? 'aberta', taskId: row.task_id ?? row.taskId, createdAt: row.created_at ?? row.createdAt };
             if (table === 'metas') return { ...row, lojaId: row.loja_id, userId: row.vendedor_id, weekStart: row.semana_inicio, weekEnd: row.semana_fim, bronze: Number(row.bronze || 0), silver: Number(row.prata || 0), gold: Number(row.ouro || 0), diamond: Number(row.diamante || 0), month: String(row.mes_referencia || '').slice(0, 7), monthlyBronze: Number(row.mensal_bronze ?? 0), monthlySilver: Number(row.mensal_prata ?? 0), monthlyGold: Number(row.mensal_ouro ?? 0), monthlyDiamond: Number(row.mensal_diamante ?? row.meta_mensal ?? 0), monthly: Number(row.mensal_diamante ?? row.meta_mensal ?? 0) };
-            if (table === 'conteudos') return { ...row, type: row.tipo, text: row.texto, author: row.autor || '', mood: row.humor || row.mood || '', active: row.ativo !== false };
+            if (table === 'conteudos') return { ...row, type: row.tipo, text: row.texto, mood: row.humor || row.mood || '', active: row.ativo !== false };
             if (table === 'metas_mensais') return { ...row, lojaId: row.loja_id, month: String(row.mes_referencia || '').slice(0, 7), total: Number(row.valor_total || 0) };
             if (table === 'metas_semanais') return { ...row, lojaId: row.loja_id, monthlyGoalId: row.meta_mensal_id, name: row.nome, weekStart: row.semana_inicio, weekEnd: row.semana_fim, total: Number(row.valor_total || 0), distributions: row.distribuicao || [] };
             if (table === 'vendas_loja') return { ...row, lojaId: row.loja_id, client: row.descricao, value: Number(row.valor || 0), date: row.data, datetime: `${row.data}T12:00:00`, storeSale: true };
@@ -1250,13 +1252,38 @@
             localStorage.setItem(personLoginSelectionKey, JSON.stringify({ ...getPersonLoginSelection(), ...changes }));
         }
 
-        function getContents() { try { const saved = JSON.parse(localStorage.getItem('siga-conteudos')); return Array.isArray(saved) ? saved : []; } catch (error) { return []; } }
+        function getContents() { try { const saved = JSON.parse(localStorage.getItem('siga-conteudos')); return Array.isArray(saved) ? saved.map(({ author, autor, ...content }) => content) : []; } catch (error) { return []; } }
         function saveContents(list) {
             const previous = getContents();
             const uniqueContents = [...new Map(list.map(item => [`${item.type}\u0000${item.text}`, item])).values()];
             localStorage.setItem('siga-conteudos', JSON.stringify(uniqueContents));
             const removedIds = previous.filter(item => !uniqueContents.some(next => next.id === item.id)).map(item => item.id);
             syncStoredList('siga-conteudos', uniqueContents, removedIds);
+        }
+
+        function importContentJson(type, inputId) {
+            const input = document.getElementById(inputId);
+            try {
+                const parsed = JSON.parse(input.value);
+                if (!Array.isArray(parsed) || !parsed.length) throw new Error('O JSON precisa ser uma lista com pelo menos um item.');
+                const imported = parsed.map(item => {
+                    const text = typeof item === 'string' ? item.trim() : String(item?.texto ?? item?.text ?? '').trim();
+                    const mood = typeof item === 'object' && item ? String(item.humor ?? item.mood ?? '').trim() : '';
+                    if (!text) throw new Error('Todos os itens precisam ter o campo texto.');
+                    return { id: crypto.randomUUID(), type, mood, text, active: true };
+                });
+                saveContents([...getContents(), ...imported]);
+                input.value = '';
+                renderContentLists();
+                showToast(`${imported.length} ${type === 'frase' ? 'frase(s)' : 'dica(s)'} importada(s).`);
+            } catch (error) {
+                showToast(`JSON inválido: ${error.message}`, 'error');
+            }
+        }
+
+        function copyContentJsonTemplate(type) {
+            const template = type === 'frase' ? '[\n  {"texto": "Sua frase aqui", "humor": ""}\n]' : '[\n  {"texto": "Sua dica de venda aqui"}\n]';
+            copyTextRobust(template, success => showToast(success ? 'Modelo JSON copiado.' : 'Não foi possível copiar o modelo.', success ? 'info' : 'error'));
         }
 
         function dailyContent(type) {
@@ -1271,7 +1298,7 @@
         function renderDailyContent() {
             const phrase = dailyContent('frase');
             const tip = dailyContent('dica');
-            if (phrase) { document.getElementById('daily-phrase-text').textContent = `"${phrase.text}"`; document.getElementById('daily-phrase-author').textContent = phrase.author ? `— ${phrase.author}` : ''; }
+            if (phrase) document.getElementById('daily-phrase-text').textContent = `"${phrase.text}"`;
             if (tip) document.getElementById('daily-sales-tip').textContent = `"${tip.text}"`;
         }
 
@@ -2337,7 +2364,7 @@
             ['frase', 'dica'].forEach(type => {
                 const target = document.getElementById(type === 'frase' ? 'phrase-list' : 'tip-list');
                 const items = contents.filter(item => item.type === type);
-                target.innerHTML = items.length ? items.map(item => `<article class="rounded-xl border border-slate-100 bg-slate-50 p-3"><div class="flex items-start justify-between gap-2"><div class="min-w-0"><p class="text-xs font-bold text-slate-700">${escapeHtml(item.text)}</p><p class="mt-1 text-[10px] text-slate-400">${escapeHtml(item.author || 'Sem autor')} · ${escapeHtml(getMood(item.mood)?.label || 'Todos os humores')}</p></div><div class="flex shrink-0 gap-1"><button type="button" data-edit-content="${item.id}" aria-label="Editar conteúdo" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-indigo-600"><i data-lucide="pencil" class="h-4 w-4"></i></button><button type="button" data-delete-content="${item.id}" aria-label="Excluir conteúdo" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-red-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button></div></div></article>`).join('') : '<p class="text-xs text-slate-400">Nenhum conteúdo cadastrado.</p>';
+                target.innerHTML = items.length ? items.map(item => `<article class="rounded-xl border border-slate-100 bg-slate-50 p-3"><div class="flex items-start justify-between gap-2"><div class="min-w-0"><p class="text-xs font-bold text-slate-700">${escapeHtml(item.text)}</p><p class="mt-1 text-[10px] text-slate-400">${escapeHtml(getMood(item.mood)?.label || 'Todos os humores')}</p></div><div class="flex shrink-0 gap-1"><button type="button" data-edit-content="${item.id}" aria-label="Editar conteúdo" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-indigo-600"><i data-lucide="pencil" class="h-4 w-4"></i></button><button type="button" data-delete-content="${item.id}" aria-label="Excluir conteúdo" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-red-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button></div></div></article>`).join('') : '<p class="text-xs text-slate-400">Nenhum conteúdo cadastrado.</p>';
             });
             lucide.createIcons();
         }
@@ -2600,16 +2627,20 @@
             document.getElementById('content-form').addEventListener('submit', event => {
                 event.preventDefault();
                 const id = document.getElementById('content-editing-id').value;
-                const content = { id: id || crypto.randomUUID(), type: document.getElementById('content-type-input').value, mood: document.getElementById('content-mood-input').value, text: document.getElementById('content-text-input').value.trim(), author: document.getElementById('content-author-input').value.trim(), active: true };
+                const content = { id: id || crypto.randomUUID(), type: document.getElementById('content-type-input').value, mood: document.getElementById('content-mood-input').value, text: document.getElementById('content-text-input').value.trim(), active: true };
                 if (!content.text) return;
                 const contents = getContents();
                 saveContents(id ? contents.map(item => item.id === id ? content : item) : [...contents, content]);
                 event.target.reset(); document.getElementById('content-editing-id').value = ''; document.getElementById('cancel-content-edit').classList.add('hidden'); renderContentLists();
             });
+            document.getElementById('import-phrase-json').addEventListener('click', () => importContentJson('frase', 'phrase-json-input'));
+            document.getElementById('import-tip-json').addEventListener('click', () => importContentJson('dica', 'tip-json-input'));
+            document.getElementById('copy-phrase-json-template').addEventListener('click', () => copyContentJsonTemplate('frase'));
+            document.getElementById('copy-tip-json-template').addEventListener('click', () => copyContentJsonTemplate('dica'));
             document.getElementById('cancel-content-edit').addEventListener('click', () => { document.getElementById('content-form').reset(); document.getElementById('content-editing-id').value = ''; document.getElementById('cancel-content-edit').classList.add('hidden'); });
             document.getElementById('view-master-panel').addEventListener('click', async event => {
                 const edit = event.target.closest('[data-edit-content]');
-                if (edit) { const item = getContents().find(content => content.id === edit.dataset.editContent); if (!item) return; document.getElementById('content-editing-id').value = item.id; document.getElementById('content-type-input').value = item.type; document.getElementById('content-mood-input').value = item.mood || ''; document.getElementById('content-text-input').value = item.text; document.getElementById('content-author-input').value = item.author || ''; document.getElementById('cancel-content-edit').classList.remove('hidden'); return; }
+                if (edit) { const item = getContents().find(content => content.id === edit.dataset.editContent); if (!item) return; document.getElementById('content-editing-id').value = item.id; document.getElementById('content-type-input').value = item.type; document.getElementById('content-mood-input').value = item.mood || ''; document.getElementById('content-text-input').value = item.text; document.getElementById('cancel-content-edit').classList.remove('hidden'); return; }
                 const remove = event.target.closest('[data-delete-content]');
                 if (remove && await siteConfirm('Excluir este conteúdo?')) { saveContents(getContents().filter(item => item.id !== remove.dataset.deleteContent)); renderContentLists(); }
             });
@@ -3858,7 +3889,7 @@
         function ensureDefaultMoodContents() {
             const contents = getContents();
             const existingKeys = new Set(contents.filter(item => item.type === 'frase' && item.mood).map(item => `${item.mood}:${item.text}`));
-            const additions = Object.entries(defaultMoodPhrases).flatMap(([mood, phrases]) => phrases.filter(text => !existingKeys.has(`${mood}:${text}`)).map(text => ({ id: crypto.randomUUID(), type: 'frase', mood, text, author: '', active: true })));
+            const additions = Object.entries(defaultMoodPhrases).flatMap(([mood, phrases]) => phrases.filter(text => !existingKeys.has(`${mood}:${text}`)).map(text => ({ id: crypto.randomUUID(), type: 'frase', mood, text, active: true })));
             if (additions.length) saveContents([...contents, ...additions]);
         }
 
