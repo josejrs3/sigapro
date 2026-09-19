@@ -988,7 +988,7 @@
                     else if (value) writeStoredList(`${storageKey}::${value}`, []);
                 }
                 const sanitizedList = table === 'lojas' ? list.filter(store => !isDemoStore(store)) : list;
-                if (table === 'lojas' || table === 'perfis' || table === 'prospeccao_listas') {
+                if (table === 'lojas' || table === 'perfis' || table === 'prospeccao_listas' || table === 'conteudos') {
                     writeStoredList(storageKey, sanitizedList);
                 } else if (sanitizedList.length) {
                     const scopedTables = new Set(['tarefas', 'vendas', 'atendimentos', 'condicionais', 'vendas_loja']);
@@ -1003,7 +1003,7 @@
                             writeStoredList(key, table === 'tarefas' ? items : mergeStoredLists(readStoredList(key), items));
                         });
                     } else writeStoredList(storageKey, mergeStoredLists(readStoredList(storageKey).filter(item => table !== 'lojas' || !isDemoStore(item)), sanitizedList));
-                } else if (table === 'lojas') {
+                } else if (table === 'lojas' || table === 'conteudos') {
                     writeStoredList(storageKey, readStoredList(storageKey).filter(store => !isDemoStore(store)));
                 }
             }));
@@ -2694,7 +2694,6 @@
             await hydrateFromSupabase();
             retryPendingSupabaseSyncs();
             pruneExpiredProjectData();
-            ensureDefaultMoodContents();
             if (getSession()?.type === 'user' && getSession()?.role === 'gerente' && location.hash === '#manager-goals') {
                 location.hash = 'app';
                 return;
@@ -2713,7 +2712,6 @@
         });
         bootstrapSupabase().catch(error => {
             console.error('Falha ao carregar dados remotos:', error);
-            ensureDefaultMoodContents();
             applyRoute();
         });
         // ================= FIM AUTENTICAÇÃO E MULTI-LOJA =================
@@ -4064,4 +4062,5 @@
         }
     </script>
 </body>
+</html>
 </html>
