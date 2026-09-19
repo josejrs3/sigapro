@@ -178,7 +178,7 @@
                     <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div class="flex items-center justify-between gap-2"><h3 class="text-xs font-black uppercase tracking-wider text-slate-700">Importar frases via JSON</h3><button type="button" id="copy-phrase-json-template" class="rounded-lg bg-white px-3 py-2 text-[10px] font-black text-indigo-600 shadow-sm">Copiar modelo</button></div><textarea id="phrase-json-input" rows="5" placeholder='{"humores_validos":["muito-mal","mal","normal","bem","excelente","energizado"],"frases":[{"texto":"Sua frase aqui","humor":"normal"}]}' class="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-xs outline-none"></textarea><button type="button" id="import-phrase-json" class="mt-2 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-black text-white">Importar frases</button></div>
                     <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4"><div class="flex items-center justify-between gap-2"><h3 class="text-xs font-black uppercase tracking-wider text-slate-700">Importar dicas via JSON</h3><button type="button" id="copy-tip-json-template" class="rounded-lg bg-white px-3 py-2 text-[10px] font-black text-indigo-600 shadow-sm">Copiar modelo</button></div><textarea id="tip-json-input" rows="5" placeholder='[{"texto":"Sua dica aqui"}]' class="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-xs outline-none"></textarea><button type="button" id="import-tip-json" class="mt-2 w-full rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-black text-white">Importar dicas</button></div>
                 </div>
-                <div class="mt-6 grid gap-4 md:grid-cols-2"><div><h3 class="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Frases</h3><div id="phrase-list" class="space-y-2"></div></div><div><h3 class="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Dicas de venda</h3><div id="tip-list" class="space-y-2"></div></div></div>
+                <div class="mt-6 grid gap-4 md:grid-cols-2"><div><div class="mb-2 flex flex-wrap items-center justify-between gap-2"><h3 class="text-xs font-black uppercase tracking-wider text-slate-500">Frases</h3><select id="phrase-mood-filter" class="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-slate-600 outline-none"><option value="">Todos os humores</option><option value="muito-mal">Muito mal</option><option value="mal">Mal</option><option value="normal">Normal</option><option value="bem">Bem</option><option value="excelente">Excelente</option><option value="energizado">Energizado</option></select></div><div id="phrase-list" class="space-y-2"></div><button type="button" id="phrase-show-more" class="mt-3 hidden w-full rounded-xl border border-indigo-200 px-4 py-2.5 text-[10px] font-black text-indigo-600 hover:bg-indigo-50">Mostrar mais</button></div><div><h3 class="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">Dicas de venda</h3><div id="tip-list" class="space-y-2"></div><button type="button" id="tip-show-more" class="mt-3 hidden w-full rounded-xl border border-indigo-200 px-4 py-2.5 text-[10px] font-black text-indigo-600 hover:bg-indigo-50">Mostrar mais</button></div></div>
             </section>
 
             <section id="master-products-view" class="hidden rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
@@ -1253,6 +1253,9 @@
         }
 
         function getContents() { try { const saved = JSON.parse(localStorage.getItem('siga-conteudos')); return Array.isArray(saved) ? saved.map(({ author, autor, ...content }) => content.type === 'dica' ? { ...content, mood: '' } : content) : []; } catch (error) { return []; } }
+        const contentDisplayLimits = { frase: 20, dica: 20 };
+        let phraseMoodFilter = '';
+
         function saveContents(list) {
             const previous = getContents();
             const uniqueContents = [...new Map(list.map(item => [`${item.type}\u0000${item.text}`, item])).values()];
@@ -2370,8 +2373,13 @@
             const contents = getContents();
             ['frase', 'dica'].forEach(type => {
                 const target = document.getElementById(type === 'frase' ? 'phrase-list' : 'tip-list');
-                const items = contents.filter(item => item.type === type);
+                const filteredItems = contents.filter(item => item.type === type && (type !== 'frase' || !phraseMoodFilter || item.mood === phraseMoodFilter));
+                const limit = contentDisplayLimits[type];
+                const items = filteredItems.slice(0, limit);
                 target.innerHTML = items.length ? items.map(item => `<article class="rounded-xl border border-slate-100 bg-slate-50 p-3"><div class="flex items-start justify-between gap-2"><div class="min-w-0"><p class="text-xs font-bold text-slate-700">${escapeHtml(item.text)}</p>${type === 'frase' ? `<p class="mt-1 text-[10px] text-slate-400">${escapeHtml(getMood(item.mood)?.label || 'Todos os humores')}</p>` : ''}</div><div class="flex shrink-0 gap-1"><button type="button" data-edit-content="${item.id}" aria-label="Editar conteúdo" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-indigo-600"><i data-lucide="pencil" class="h-4 w-4"></i></button><button type="button" data-delete-content="${item.id}" aria-label="Excluir conteúdo" class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-red-600"><i data-lucide="trash-2" class="h-4 w-4"></i></button></div></div></article>`).join('') : '<p class="text-xs text-slate-400">Nenhum conteúdo cadastrado.</p>';
+                const showMoreButton = document.getElementById(type === 'frase' ? 'phrase-show-more' : 'tip-show-more');
+                showMoreButton.classList.toggle('hidden', filteredItems.length <= 20);
+                showMoreButton.textContent = limit >= filteredItems.length ? 'Mostrar menos' : `Mostrar mais (${filteredItems.length - limit})`;
             });
             lucide.createIcons();
         }
@@ -2647,6 +2655,9 @@
             document.getElementById('import-tip-json').addEventListener('click', () => importContentJson('dica', 'tip-json-input'));
             document.getElementById('copy-phrase-json-template').addEventListener('click', () => copyContentJsonTemplate('frase'));
             document.getElementById('copy-tip-json-template').addEventListener('click', () => copyContentJsonTemplate('dica'));
+            document.getElementById('phrase-mood-filter').addEventListener('change', event => { phraseMoodFilter = event.target.value; contentDisplayLimits.frase = 20; renderContentLists(); });
+            document.getElementById('phrase-show-more').addEventListener('click', () => { const total = getContents().filter(item => item.type === 'frase' && (!phraseMoodFilter || item.mood === phraseMoodFilter)).length; contentDisplayLimits.frase = contentDisplayLimits.frase >= total ? 20 : contentDisplayLimits.frase + 20; renderContentLists(); });
+            document.getElementById('tip-show-more').addEventListener('click', () => { const total = getContents().filter(item => item.type === 'dica').length; contentDisplayLimits.dica = contentDisplayLimits.dica >= total ? 20 : contentDisplayLimits.dica + 20; renderContentLists(); });
             document.getElementById('cancel-content-edit').addEventListener('click', () => { document.getElementById('content-form').reset(); document.getElementById('content-editing-id').value = ''; document.getElementById('cancel-content-edit').classList.add('hidden'); });
             document.getElementById('view-master-panel').addEventListener('click', async event => {
                 const edit = event.target.closest('[data-edit-content]');
