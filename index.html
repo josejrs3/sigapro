@@ -39,11 +39,11 @@
         button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid rgba(99, 102, 241, 0.25); outline-offset: 2px; }
         #app-shell > header { background: rgba(255, 255, 255, 0.92); box-shadow: 0 1px 0 var(--line); }
         #app-shell > header > div:first-child { min-height: 4.25rem; }
-        #dashboard-page, #tasks-page, #sales-page, #service-page, #conditional-page, #manager-overview-page, #manager-report-page, #manager-goals-page { width: min(100% - 2rem, 64rem); }
-        #dashboard-page > section, #dashboard-page > div > section, #tasks-page > *, #sales-page > *, #service-page > *, #conditional-page > *, #manager-overview-page > *, #manager-report-page > *, #manager-goals-page > * { border-color: var(--line); }
+        #dashboard-page, #tasks-page, #sales-page, #service-page, #conditional-page, #prospecting-page, #manager-overview-page, #manager-report-page, #manager-goals-page, #manager-prospecting-page { width: min(100% - 2rem, 64rem); }
+        #dashboard-page > section, #dashboard-page > div > section, #tasks-page > *, #sales-page > *, #service-page > *, #conditional-page > *, #prospecting-page > *, #manager-overview-page > *, #manager-report-page > *, #manager-goals-page > *, #manager-prospecting-page > * { border-color: var(--line); }
         #dashboard-page > section:not(:first-child), #dashboard-page > div > section, #dashboard-page > section + section { box-shadow: 0 12px 30px rgba(30, 41, 59, 0.045); }
         #dashboard-page > section:first-child { padding-top: 1.5rem; padding-bottom: 1.25rem; }
-        #dashboard-page h2, #tasks-page h2, #sales-page h2, #service-page h2, #conditional-page h2, #manager-overview-page h2, #manager-report-page h2, #manager-goals-page h2 { letter-spacing: -0.02em; }
+        #dashboard-page h2, #tasks-page h2, #sales-page h2, #service-page h2, #conditional-page h2, #prospecting-page h2, #manager-overview-page h2, #manager-report-page h2, #manager-goals-page h2, #manager-prospecting-page h2 { letter-spacing: -0.02em; }
         .desktop-nav-button { min-height: 2.5rem; }
         #manager-bar > div { min-height: 2.75rem; }
         #manager-bar button, #manager-bar select { min-height: 2.25rem; }
@@ -73,7 +73,7 @@
             #app-shell { padding-bottom: 1rem; }
             #app-shell > header > div:first-child { padding-left: 1rem; padding-right: 1rem; }
             #app-shell > header .text-xl { font-size: 1.05rem; }
-            #dashboard-page, #tasks-page, #sales-page, #service-page, #conditional-page, #manager-overview-page, #manager-report-page, #manager-goals-page { width: calc(100% - 1.25rem); padding-left: 0; padding-right: 0; }
+            #dashboard-page, #tasks-page, #sales-page, #service-page, #conditional-page, #prospecting-page, #manager-overview-page, #manager-report-page, #manager-goals-page, #manager-prospecting-page { width: calc(100% - 1.25rem); padding-left: 0; padding-right: 0; }
             #dashboard-page { gap: 1rem; }
             #dashboard-page > section:first-child { padding-top: 1rem; }
             #dashboard-page > section:not(:first-child), #dashboard-page > div > section { border-radius: 1.5rem; padding: 1.125rem; }
@@ -236,6 +236,7 @@
                     <button type="button" id="manager-overview-button" class="rounded-lg bg-amber-500 px-3 py-1.5 text-[10px] font-black text-white hover:bg-amber-600">Tarefas</button>
                     <button type="button" id="manager-report-button" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-black text-white hover:bg-emerald-700">Relatório</button>
                     <button type="button" id="manager-goals-button" class="rounded-lg bg-indigo-600 px-3 py-1.5 text-[10px] font-black text-white hover:bg-indigo-700">Metas</button>
+                    <button type="button" id="manager-prospecting-button" class="rounded-lg bg-sky-600 px-3 py-1.5 text-[10px] font-black text-white hover:bg-sky-700">Prospecção</button>
                 </div>
             </div>
         </div>
@@ -246,6 +247,7 @@
                 <button type="button" data-desktop-page="sales" class="desktop-nav-button rounded-xl px-3 py-2 text-xs font-black text-slate-500 transition hover:bg-indigo-50"><i data-lucide="shopping-bag" class="mr-1 inline h-4 w-4"></i>Vendas</button>
                 <button type="button" data-desktop-page="tasks" class="desktop-nav-button rounded-xl px-3 py-2 text-xs font-black text-slate-500 transition hover:bg-indigo-50"><i data-lucide="check-square" class="mr-1 inline h-4 w-4"></i>Tarefas</button>
                 <button type="button" data-desktop-page="conditional" class="desktop-nav-button rounded-xl px-3 py-2 text-xs font-black text-slate-500 transition hover:bg-indigo-50"><i data-lucide="rotate-ccw" class="mr-1 inline h-4 w-4"></i>Condicionais</button>
+                <button type="button" data-desktop-page="prospecting" class="desktop-nav-button rounded-xl px-3 py-2 text-xs font-black text-slate-500 transition hover:bg-indigo-50"><i data-lucide="megaphone" class="mr-1 inline h-4 w-4"></i>Prospecção</button>
             </div>
         </nav>
     </header>
@@ -493,6 +495,13 @@
         <div id="conditional-list" class="space-y-3"></div>
     </section>
 
+    <!-- TELA DE PROSPECCAO -->
+    <section id="prospecting-page" class="hidden max-w-5xl mx-auto p-4 space-y-6">
+        <div class="flex items-center gap-3"><button type="button" data-back-dashboard aria-label="Voltar ao início" class="hidden h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 md:flex"><i data-lucide="arrow-left" class="h-4 w-4"></i></button><div><h2 class="text-2xl font-black text-slate-800">Prospecção</h2><p class="mt-1 text-xs font-medium text-slate-500">Fale com seus contatos usando mensagens prontas.</p></div></div>
+        <section class="rounded-[2rem] border border-sky-100 bg-white p-5 shadow-sm"><div class="grid gap-3 md:grid-cols-3"><label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Data<input id="prospecting-date" type="date" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold outline-none"></label><label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Lista de contatos<select id="prospecting-list-select" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold outline-none"></select></label><label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Mensagem pronta<select id="prospecting-message-select" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold outline-none"></select></label></div><p id="prospecting-availability" class="mt-3 rounded-xl bg-sky-50 px-3 py-2 text-[10px] font-bold text-sky-700"></p></section>
+        <div id="prospecting-contacts" class="space-y-2"></div>
+    </section>
+
     <!-- FAB -->
     <button id="fab-button" class="fixed bottom-24 right-6 md:bottom-10 md:right-10 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl shadow-indigo-300 hover:scale-110 active:scale-95 transition-all z-50">
         <i data-lucide="plus" class="w-8 h-8"></i>
@@ -651,9 +660,17 @@
         </div>
     </section>
 
+    <!-- GESTAO DE PROSPECCAO -->
+    <section id="manager-prospecting-page" class="hidden max-w-5xl mx-auto p-4 space-y-6">
+        <div class="flex items-center gap-3"><button type="button" data-back-dashboard aria-label="Voltar" class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600"><i data-lucide="arrow-left" class="h-4 w-4"></i></button><div><h2 class="text-2xl font-black text-slate-800">Prospecção da equipe</h2><p class="mt-1 text-xs font-medium text-slate-500">Crie listas, distribua contatos e prepare mensagens para o WhatsApp.</p></div></div>
+        <section class="rounded-[2rem] border border-sky-100 bg-white p-5 shadow-sm"><form id="prospecting-list-form" class="grid gap-3 md:grid-cols-2"><input type="hidden" id="prospecting-editing-id"><label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Nome da lista<input id="prospecting-list-name" required maxlength="80" placeholder="Ex.: Aniversários" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-medium outline-none"></label><label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Dias disponíveis<select id="prospecting-list-days" multiple class="mt-1 h-28 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold outline-none"><option value="0">Domingo</option><option value="1">Segunda</option><option value="2">Terça</option><option value="3">Quarta</option><option value="4">Quinta</option><option value="5">Sexta</option><option value="6">Sábado</option></select></label><label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Nomes, um por linha<textarea id="prospecting-names" required rows="7" placeholder="Ana Silva&#10;Bruno Souza&#10;Carla Lima" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"></textarea></label><label class="text-[10px] font-black uppercase tracking-wider text-slate-400">WhatsApps, na mesma ordem<textarea id="prospecting-phones" required rows="7" placeholder="5511999999999&#10;5511988888888&#10;5511977777777" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"></textarea></label><div class="flex justify-end gap-2 md:col-span-2"><button type="button" id="prospecting-cancel-edit" class="hidden rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500">Cancelar</button><button type="submit" class="rounded-xl bg-sky-600 px-5 py-2.5 text-xs font-black text-white">Salvar lista</button></div></form><p class="mt-2 text-[10px] text-slate-400">Deixe todos os dias selecionados para aparecer diariamente. O número pode conter DDI, DDD e apenas números.</p></section>
+        <section class="rounded-[2rem] border border-indigo-100 bg-white p-5 shadow-sm"><form id="prospecting-message-form" class="grid gap-3 md:grid-cols-[1fr_2fr_auto]"><input type="hidden" id="prospecting-message-editing-id"><label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Título<input id="prospecting-message-title" required maxlength="80" placeholder="Mensagem de aniversário" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"></label><label class="text-[10px] font-black uppercase tracking-wider text-slate-400">Texto da mensagem<textarea id="prospecting-message-body" required maxlength="1200" rows="3" placeholder="Olá, {{nome}}! Tudo bem?" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none"></textarea></label><div class="flex items-end"><button type="submit" class="w-full rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-black text-white">Salvar mensagem</button></div></form><p class="mt-2 text-[10px] text-slate-400">Use <strong>{{nome}}</strong> para inserir o nome do cliente. A formatação do WhatsApp, como *negrito* e ~riscado~, será preservada.</p><div id="prospecting-message-list" class="mt-5 grid gap-2 md:grid-cols-2"></div></section>
+        <div id="manager-prospecting-list" class="space-y-2"></div>
+    </section>
+
     <!-- NAV MOBILE -->
     <nav id="mobile-navigation" class="md:hidden fixed inset-x-0 bottom-0 z-[60] h-20 w-full bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl border-t border-slate-100 flex items-center justify-around px-4">
-        <div class="nav-indicator" id="nav-indicator" style="width: 20%; left: 0;"></div>
+        <div class="nav-indicator" id="nav-indicator" style="width: 16.666%; left: 0;"></div>
         <button type="button" id="nav-inicio" class="flex flex-col items-center gap-1 text-indigo-600 flex-1 relative z-10 py-1 transition-colors">
             <i data-lucide="layout-grid" class="w-6 h-6"></i>
             <span class="text-[9px] font-black uppercase tracking-widest">Início</span>
@@ -671,6 +688,7 @@
             <i data-lucide="rotate-ccw" class="w-6 h-6"></i>
             <span class="text-[9px] font-black uppercase tracking-widest">Condic.</span>
         </button>
+        <button type="button" id="nav-prospecting" class="flex flex-col items-center gap-1 text-slate-300 flex-1 relative z-10 py-1 transition-colors"><i data-lucide="megaphone" class="w-6 h-6"></i><span class="text-[9px] font-black uppercase tracking-widest">Prospec.</span></button>
     </nav>
 
     </div>
@@ -685,6 +703,7 @@
         const lojasStorageKey = 'siga-lojas';
         const usuariosStorageKey = 'siga-usuarios';
         const sessionStorageName = 'siga-sessao';
+        const prospectingStorageKey = 'siga-prospeccao';
 
         const databaseTableByStorageKey = {
             'siga-tarefas': 'tarefas',
@@ -696,7 +715,8 @@
             'siga-metas-semanais': 'metas_semanais',
             'siga-vendas-loja': 'vendas_loja',
             'siga-conteudos': 'conteudos',
-            'siga-produtos': 'produtos'
+            'siga-produtos': 'produtos',
+            'siga-prospeccao': 'prospeccao_listas'
         };
 
         const supabaseRetentionPolicy = {
@@ -737,6 +757,7 @@
             if (table === 'metas_semanais') return { id: item.id, loja_id: item.lojaId, meta_mensal_id: item.monthlyGoalId, nome: item.name, semana_inicio: item.weekStart, semana_fim: item.weekEnd, valor_total: item.total, distribuicao: item.distributions || [] };
             if (table === 'vendas_loja') return { id: item.id, loja_id: item.lojaId || getSession()?.lojaId || null, descricao: item.client || '', valor: Number(item.value || 0), data: item.date };
             if (table === 'produtos') return { id: item.id, nome: item.name, aceita_genero: item.gender === true, ativo: item.active !== false };
+            if (table === 'prospeccao_listas') return { id: item.id, loja_id: item.lojaId, nome: item.name, dias_disponiveis: item.days || [], contatos: item.contacts || [], mensagens: item.messages || [], created_at: item.createdAt, updated_at: item.updatedAt };
             return item;
         }
 
@@ -751,6 +772,7 @@
             if (table === 'metas_semanais') return { ...row, lojaId: row.loja_id, monthlyGoalId: row.meta_mensal_id, name: row.nome, weekStart: row.semana_inicio, weekEnd: row.semana_fim, total: Number(row.valor_total || 0), distributions: row.distribuicao || [] };
             if (table === 'vendas_loja') return { ...row, lojaId: row.loja_id, client: row.descricao, value: Number(row.valor || 0), date: row.data, datetime: `${row.data}T12:00:00`, storeSale: true };
             if (table === 'produtos') return { ...row, name: row.nome ?? row.name, gender: row.aceita_genero ?? row.gender ?? false, active: row.ativo !== false };
+            if (table === 'prospeccao_listas') return { ...row, lojaId: row.loja_id, name: row.nome ?? row.name, days: row.dias_disponiveis || [], contacts: row.contatos || [], messages: row.mensagens || [], createdAt: row.created_at, updatedAt: row.updated_at };
             return row;
         }
 
@@ -937,6 +959,7 @@
             } else {
                 addRequest('lojas', lojasStorageKey, 'id', session.lojaId);
                 addRequest('perfis', usuariosStorageKey, 'loja_id', session.lojaId);
+                addRequest('prospeccao_listas', prospectingStorageKey, 'loja_id', session.lojaId);
                 addRequest('produtos', 'siga-produtos');
                 const userId = effectiveUserId();
                 const managerStoreView = session.role === 'gerente' && !session.viewingUserId;
@@ -963,7 +986,7 @@
                     else if (value) writeStoredList(`${storageKey}::${value}`, []);
                 }
                 const sanitizedList = table === 'lojas' ? list.filter(store => !isDemoStore(store)) : list;
-                if (table === 'lojas' || table === 'perfis') {
+                if (table === 'lojas' || table === 'perfis' || table === 'prospeccao_listas') {
                     writeStoredList(storageKey, sanitizedList);
                 } else if (sanitizedList.length) {
                     const scopedTables = new Set(['tarefas', 'vendas', 'atendimentos', 'condicionais', 'vendas_loja']);
@@ -1354,10 +1377,11 @@
                 renderMasterPanel();
                 return;
             }
-            if (hash === 'app' || hash === 'manager-report' || hash === 'manager-overview' || hash === 'manager-goals') {
+            if (hash === 'app' || hash === 'prospecting' || hash === 'manager-report' || hash === 'manager-overview' || hash === 'manager-goals' || hash === 'manager-prospecting') {
                 if (session?.type !== 'user') { location.hash = ''; return; }
                     if (hash === 'app' && session.role === 'gerente' && !session.viewingUserId) { location.hash = 'manager-report'; return; }
-                if ((hash === 'manager-overview' || hash === 'manager-goals') && session.role !== 'gerente') { location.hash = 'app'; return; }
+                    if (hash === 'prospecting' && session.role === 'gerente' && !session.viewingUserId) { location.hash = 'manager-prospecting'; return; }
+                if ((hash === 'manager-overview' || hash === 'manager-goals' || hash === 'manager-prospecting') && session.role !== 'gerente') { location.hash = 'app'; return; }
                 if (hash !== 'app' && session.role === 'gerente' && session.viewingUserId) {
                     session.viewingUserId = null;
                     saveSession(session);
@@ -1369,6 +1393,8 @@
                 if (hash === 'manager-overview') showPage('manager-overview');
                 if (hash === 'manager-report') showPage('manager-report');
                 if (hash === 'manager-goals') showPage('manager-goals');
+                if (hash === 'manager-prospecting') showPage('manager-prospecting');
+                if (hash === 'prospecting') showPage('prospecting');
                 return;
             }
             if (session?.type === 'master') { location.hash = 'master'; return; }
@@ -1461,6 +1487,92 @@
             document.getElementById('manager-bar-label').textContent = inVendorPanel ? `Painel de: ${escapeHtml(viewingVendor.name)}` : `Loja: ${escapeHtml(getLojas().find(store => store.id === session.lojaId)?.name || '')}`;
         }
 
+        function getProspectingLists() {
+            const session = getSession();
+            return readStoredList(prospectingStorageKey).filter(list => list.lojaId === session?.lojaId);
+        }
+
+        function saveProspectingLists(lists) {
+            const previous = readStoredList(prospectingStorageKey);
+            writeStoredList(prospectingStorageKey, lists);
+            syncStoredList(prospectingStorageKey, lists, previous.filter(item => !lists.some(next => next.id === item.id)).map(item => item.id));
+        }
+
+        function getProspectingMessages() {
+            const messages = new Map();
+            getProspectingLists().forEach(list => (list.messages || []).forEach(message => messages.set(message.id, message)));
+            return [...messages.values()].sort((first, second) => first.title.localeCompare(second.title, 'pt-BR'));
+        }
+
+        function prospectingListAvailable(list, date = new Date()) {
+            return !list.days?.length || list.days.includes(String(date.getDay()));
+        }
+
+        let prospectingSelectedDate = getLocalDateKey();
+
+        function assignedProspectingContacts(list) {
+            const session = getSession();
+            const vendors = getUsuarios().filter(user => user.lojaId === session?.lojaId && user.role === 'vendedor').sort((first, second) => first.id.localeCompare(second.id));
+            const userId = effectiveUserId();
+            if (!vendors.length || !userId) return [];
+            return (list.contacts || []).filter((contact, index) => vendors[index % vendors.length]?.id === userId).map(contact => ({ ...contact, sent: contact.sentBy?.includes(userId) }));
+        }
+
+        function formatProspectingPhone(phone) {
+            const digits = String(phone || '').replace(/\D/g, '');
+            return digits.startsWith('55') ? digits : `55${digits}`;
+        }
+
+        function renderProspectingPage() {
+            const listSelect = document.getElementById('prospecting-list-select');
+            const messageSelect = document.getElementById('prospecting-message-select');
+            if (!listSelect || !messageSelect) return;
+            const lists = getProspectingLists().filter(list => prospectingListAvailable(list, new Date(`${prospectingSelectedDate}T12:00:00`)));
+            const previousList = listSelect.value;
+            listSelect.innerHTML = lists.length ? lists.map(list => `<option value="${list.id}">${escapeHtml(list.name)} (${(list.contacts || []).length})</option>`).join('') : '<option value="">Nenhuma lista disponível hoje</option>';
+            listSelect.value = lists.some(list => list.id === previousList) ? previousList : lists[0]?.id || '';
+            const messages = getProspectingMessages();
+            const previousMessage = messageSelect.value;
+            messageSelect.innerHTML = messages.length ? messages.map(message => `<option value="${message.id}">${escapeHtml(message.title)}</option>`).join('') : '<option value="">Nenhuma mensagem cadastrada</option>';
+            messageSelect.value = messages.some(message => message.id === previousMessage) ? previousMessage : messages[0]?.id || '';
+            const list = lists.find(item => item.id === listSelect.value);
+            document.getElementById('prospecting-date').value = prospectingSelectedDate;
+            document.getElementById('prospecting-availability').textContent = list ? `${assignedProspectingContacts(list).length} contato(s) atribuídos a você nesta lista.` : 'Nenhuma lista disponível para hoje.';
+            const contacts = list ? assignedProspectingContacts(list) : [];
+            document.getElementById('prospecting-contacts').innerHTML = contacts.length ? contacts.map(contact => `<article class="flex flex-col gap-3 rounded-2xl border ${contact.sent ? 'border-emerald-200 bg-emerald-50' : 'border-slate-100 bg-white'} p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"><div class="min-w-0"><p class="truncate text-sm font-black text-slate-800">${escapeHtml(contact.name)}</p><p class="mt-1 text-xs font-semibold text-slate-400">${escapeHtml(contact.phone)}</p></div><button type="button" data-send-prospecting="${contact.id}" class="flex shrink-0 items-center justify-center gap-2 rounded-xl ${contact.sent ? 'bg-emerald-500' : 'bg-green-600'} px-4 py-2.5 text-xs font-black text-white hover:brightness-105"><i data-lucide="${contact.sent ? 'check' : 'message-circle'}" class="h-4 w-4"></i>${contact.sent ? 'Mensagem enviada' : 'Enviar no WhatsApp'}</button></article>`).join('') : '<p class="rounded-2xl bg-white p-5 text-xs text-slate-400">Nenhum contato atribuído para esta lista.</p>';
+            lucide.createIcons();
+        }
+
+        function renderManagerProspecting() {
+            const lists = getProspectingLists();
+            const messages = getProspectingMessages();
+            document.getElementById('prospecting-message-list').innerHTML = messages.length ? messages.map(message => `<article class="flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3"><div class="min-w-0"><p class="text-xs font-black text-slate-700">${escapeHtml(message.title)}</p><p class="mt-1 line-clamp-2 whitespace-pre-line text-[10px] text-slate-500">${escapeHtml(message.body)}</p></div><button type="button" data-edit-prospecting-message="${message.id}" class="shrink-0 rounded-lg p-2 text-slate-400 hover:bg-white hover:text-indigo-600" aria-label="Editar mensagem"><i data-lucide="pencil" class="h-4 w-4"></i></button></article>`).join('') : '<p class="text-xs text-slate-400">Nenhuma mensagem criada.</p>';
+            document.getElementById('manager-prospecting-list').innerHTML = lists.length ? lists.map(list => `<article class="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm"><div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><p class="text-sm font-black text-slate-800">${escapeHtml(list.name)}</p><p class="mt-1 text-[10px] font-semibold text-slate-400">${(list.contacts || []).length} contato(s) · ${list.days?.length ? `Disponível em ${list.days.map(day => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][Number(day)]).join(', ')}` : 'Disponível todos os dias'}</p></div><div class="flex gap-1"><button type="button" data-edit-prospecting-list="${list.id}" class="rounded-lg p-2 text-slate-400 hover:bg-slate-50 hover:text-indigo-600" aria-label="Editar lista"><i data-lucide="pencil" class="h-4 w-4"></i></button><button type="button" data-delete-prospecting-list="${list.id}" class="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label="Excluir lista"><i data-lucide="trash-2" class="h-4 w-4"></i></button></div></div></article>`).join('') : '<p class="rounded-2xl bg-white p-5 text-xs text-slate-400">Nenhuma lista cadastrada.</p>';
+            lucide.createIcons();
+        }
+
+        function openProspectingMessage(message) {
+            document.getElementById('prospecting-message-editing-id').value = message.id;
+            document.getElementById('prospecting-message-title').value = message.title;
+            document.getElementById('prospecting-message-body').value = message.body;
+        }
+
+        function sendProspectingMessage(contactId) {
+            const listSelect = document.getElementById('prospecting-list-select');
+            const message = getProspectingMessages().find(item => item.id === document.getElementById('prospecting-message-select').value);
+            const lists = readStoredList(prospectingStorageKey);
+            const list = lists.find(item => item.id === listSelect.value);
+            const contact = list?.contacts?.find(item => item.id === contactId);
+            const userId = effectiveUserId();
+            if (!list || !contact || !message || !userId) return showToast('Selecione uma lista e uma mensagem antes de enviar.', 'error');
+            const body = message.body.replace(/\{\{\s*nome\s*\}\}/gi, contact.name);
+            const phone = formatProspectingPhone(contact.phone);
+            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(body)}`, '_blank', 'noopener');
+            contact.sentBy = [...new Set([...(contact.sentBy || []), userId])];
+            saveProspectingLists(lists);
+            renderProspectingPage();
+        }
+
         function bindManagerBar() {
             document.getElementById('manager-open-vendor-button').addEventListener('click', () => {
                 const session = getSession();
@@ -1473,6 +1585,47 @@
             document.getElementById('manager-overview-button').addEventListener('click', () => { location.hash = 'manager-overview'; });
             document.getElementById('manager-report-button').addEventListener('click', () => { location.hash = 'manager-report'; });
             document.getElementById('manager-goals-button').addEventListener('click', () => { location.hash = 'manager-goals'; });
+            document.getElementById('manager-prospecting-button').addEventListener('click', () => { location.hash = 'manager-prospecting'; });
+            document.getElementById('prospecting-list-form').addEventListener('submit', event => {
+                event.preventDefault();
+                const name = document.getElementById('prospecting-list-name').value.trim();
+                const names = document.getElementById('prospecting-names').value.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+                const phones = document.getElementById('prospecting-phones').value.split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+                if (!name || !names.length || names.length !== phones.length) return showToast('Informe a mesma quantidade de nomes e WhatsApps, na mesma ordem.', 'error');
+                const editingId = document.getElementById('prospecting-editing-id').value;
+                const allLists = readStoredList(prospectingStorageKey);
+                const existing = allLists.find(list => list.id === editingId);
+                const contacts = names.map((contactName, index) => {
+                    const oldContact = existing?.contacts?.find(contact => contact.id === `${editingId || 'new'}-${index}`);
+                    return { id: oldContact?.id || `${editingId || crypto.randomUUID()}-${index}`, name: contactName, phone: phones[index], sentBy: oldContact?.sentBy || [] };
+                });
+                const list = { ...(existing || {}), id: editingId || crypto.randomUUID(), lojaId: getSession()?.lojaId, name, days: Array.from(document.getElementById('prospecting-list-days').selectedOptions).map(option => option.value), contacts, messages: existing?.messages || getProspectingMessages(), createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+                saveProspectingLists(editingId ? allLists.map(item => item.id === editingId ? list : item) : [...allLists, list]);
+                event.target.reset(); document.getElementById('prospecting-editing-id').value = ''; document.getElementById('prospecting-cancel-edit').classList.add('hidden'); renderManagerProspecting();
+            });
+            document.getElementById('prospecting-cancel-edit').addEventListener('click', () => { document.getElementById('prospecting-list-form').reset(); document.getElementById('prospecting-editing-id').value = ''; document.getElementById('prospecting-cancel-edit').classList.add('hidden'); });
+            document.getElementById('prospecting-message-form').addEventListener('submit', event => {
+                event.preventDefault();
+                const id = document.getElementById('prospecting-message-editing-id').value || crypto.randomUUID();
+                const message = { id, title: document.getElementById('prospecting-message-title').value.trim(), body: document.getElementById('prospecting-message-body').value.trim() };
+                if (!message.title || !message.body) return;
+                const lists = readStoredList(prospectingStorageKey);
+                const updated = lists.map(list => ({ ...list, messages: [...(list.messages || []).filter(item => item.id !== id), message] }));
+                saveProspectingLists(updated);
+                event.target.reset(); document.getElementById('prospecting-message-editing-id').value = ''; renderManagerProspecting();
+            });
+            document.getElementById('manager-prospecting-page').addEventListener('click', async event => {
+                const editList = event.target.closest('[data-edit-prospecting-list]');
+                if (editList) {
+                    const list = getProspectingLists().find(item => item.id === editList.dataset.editProspectingList);
+                    if (!list) return;
+                    document.getElementById('prospecting-editing-id').value = list.id; document.getElementById('prospecting-list-name').value = list.name; document.getElementById('prospecting-names').value = (list.contacts || []).map(item => item.name).join('\n'); document.getElementById('prospecting-phones').value = (list.contacts || []).map(item => item.phone).join('\n'); Array.from(document.getElementById('prospecting-list-days').options).forEach(option => { option.selected = list.days?.includes(option.value); }); document.getElementById('prospecting-cancel-edit').classList.remove('hidden'); return;
+                }
+                const deleteList = event.target.closest('[data-delete-prospecting-list]');
+                if (deleteList && await siteConfirm('Excluir esta lista e seus contatos?')) { saveProspectingLists(readStoredList(prospectingStorageKey).filter(item => item.id !== deleteList.dataset.deleteProspectingList)); renderManagerProspecting(); return; }
+                const editMessage = event.target.closest('[data-edit-prospecting-message]');
+                if (editMessage) openProspectingMessage(getProspectingMessages().find(item => item.id === editMessage.dataset.editProspectingMessage));
+            });
             document.getElementById('manager-task-form').addEventListener('submit', event => {
                 event.preventDefault();
                 const title = document.getElementById('manager-task-title').value.trim();
@@ -2699,19 +2852,22 @@
             const salesPage = document.getElementById('sales-page');
             const servicePage = document.getElementById('service-page');
             const conditionalPage = document.getElementById('conditional-page');
+            const prospectingPage = document.getElementById('prospecting-page');
             const managerOverviewPage = document.getElementById('manager-overview-page');
             const managerGoalsPage = document.getElementById('manager-goals-page');
             const managerReportPage = document.getElementById('manager-report-page');
+            const managerProspectingPage = document.getElementById('manager-prospecting-page');
             const navInicio = document.getElementById('nav-inicio');
             const navTasks = document.getElementById('nav-tasks');
             const navSales = document.getElementById('nav-sales');
             const navService = document.getElementById('nav-service');
             const navConditional = document.getElementById('nav-conditional');
+            const navProspecting = document.getElementById('nav-prospecting');
             const indicator = document.getElementById('nav-indicator');
             document.querySelectorAll('[data-desktop-page]').forEach(button => { const active = button.dataset.desktopPage === pageName; button.classList.toggle('bg-indigo-600', active); button.classList.toggle('text-white', active); button.classList.toggle('text-slate-500', !active); });
 
-            [tasksPage, salesPage, servicePage, conditionalPage, managerOverviewPage, managerGoalsPage, managerReportPage].forEach(page => { page.classList.remove('active'); page.classList.add('hidden'); });
-            [navInicio, navTasks, navSales, navService, navConditional].forEach(nav => { nav.classList.add('text-slate-300'); nav.classList.remove('text-indigo-600'); });
+            [tasksPage, salesPage, servicePage, conditionalPage, prospectingPage, managerOverviewPage, managerGoalsPage, managerReportPage, managerProspectingPage].forEach(page => { page.classList.remove('active'); page.classList.add('hidden'); });
+            [navInicio, navTasks, navSales, navService, navConditional, navProspecting].forEach(nav => { nav.classList.add('text-slate-300'); nav.classList.remove('text-indigo-600'); });
 
             if (pageName === 'dashboard') {
                 dashboard.classList.remove('hidden');
@@ -2752,6 +2908,13 @@
                 navConditional.classList.add('text-indigo-600');
                 indicator.style.left = '80%';
                 renderConditionals();
+            } else if (pageName === 'prospecting') {
+                dashboard.classList.add('hidden');
+                prospectingPage.classList.remove('hidden');
+                navProspecting.classList.remove('text-slate-300');
+                navProspecting.classList.add('text-indigo-600');
+                indicator.style.left = '83.333%';
+                renderProspectingPage();
             } else if (pageName === 'manager-overview') {
                 dashboard.classList.add('hidden');
                 managerOverviewPage.classList.remove('hidden');
@@ -2761,6 +2924,10 @@
                 managerGoalsPage.classList.remove('hidden');
                 setGoalPeriodDefaults();
                 renderGoalForm();
+            } else if (pageName === 'manager-prospecting') {
+                dashboard.classList.add('hidden');
+                managerProspectingPage.classList.remove('hidden');
+                renderManagerProspecting();
             } else if (pageName === 'manager-report') {
                 dashboard.classList.add('hidden');
                 managerReportPage.classList.remove('hidden');
@@ -3379,6 +3546,14 @@
             document.getElementById('nav-sales').addEventListener('click', () => showPage('sales'));
             document.getElementById('nav-service').addEventListener('click', () => showPage('service'));
             document.getElementById('nav-conditional').addEventListener('click', () => showPage('conditional'));
+            document.getElementById('nav-prospecting').addEventListener('click', () => { location.hash = 'prospecting'; });
+            document.getElementById('prospecting-date').addEventListener('change', event => { prospectingSelectedDate = event.target.value || getLocalDateKey(); renderProspectingPage(); });
+            document.getElementById('prospecting-list-select').addEventListener('change', renderProspectingPage);
+            document.getElementById('prospecting-message-select').addEventListener('change', renderProspectingPage);
+            document.getElementById('prospecting-contacts').addEventListener('click', event => {
+                const button = event.target.closest('[data-send-prospecting]');
+                if (button) sendProspectingMessage(button.dataset.sendProspecting);
+            });
             document.querySelectorAll('[data-desktop-page]').forEach(button => button.addEventListener('click', () => showPage(button.dataset.desktopPage)));
             document.querySelectorAll('[data-back-dashboard]').forEach(button => button.addEventListener('click', () => showPage('dashboard')));
             document.getElementById('dashboard-sales-title').addEventListener('click', () => showPage('sales'));
