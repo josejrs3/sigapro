@@ -911,6 +911,11 @@
                     clearPendingSupabaseSync(storageKey);
                     return;
                 }
+                if (dependencyError.message?.includes('não foi encontrada neste dispositivo')) {
+                    clearPendingSupabaseSync(storageKey);
+                    console.warn(`Pendência antiga descartada em ${table}:`, dependencyError.message);
+                    return;
+                }
                 pendingSupabaseSyncs.set(storageKey, { ...pending, timer: null });
                 savePendingSupabaseSync(storageKey, pending);
                 console.warn(`Sincronização de ${table} aguardando dependências:`, dependencyError.message);
