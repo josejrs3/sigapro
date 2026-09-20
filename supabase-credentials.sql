@@ -4,6 +4,20 @@
 
 create extension if not exists pgcrypto;
 
+create table if not exists public.humor_registros (
+    id uuid primary key default gen_random_uuid(),
+    loja_id uuid not null references public.lojas(id) on delete cascade,
+    vendedor_id uuid not null references public.perfis(id) on delete cascade,
+    data date not null,
+    humor text not null,
+    updated_at timestamptz not null default now()
+);
+
+create unique index if not exists humor_registros_vendedor_data_key
+    on public.humor_registros (vendedor_id, data);
+
+grant select, insert, update, delete on public.humor_registros to anon, authenticated;
+
 create table if not exists public.prospeccao_listas (
     id uuid primary key default gen_random_uuid(),
     loja_id uuid not null references public.lojas(id) on delete cascade,
