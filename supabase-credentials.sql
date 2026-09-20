@@ -31,6 +31,14 @@ create table if not exists public.prospeccao_listas (
 
 grant select, insert, update, delete on public.prospeccao_listas to anon, authenticated;
 
+alter table public.prospeccao_listas enable row level security;
+
+drop policy if exists prospeccao_listas_anon_all on public.prospeccao_listas;
+create policy prospeccao_listas_anon_all
+    on public.prospeccao_listas for all to anon, authenticated
+    using (true)
+    with check (true);
+
 -- Compatibilidade com a coluna antiga de senha, caso ainda exista no projeto.
 do $$
 begin
