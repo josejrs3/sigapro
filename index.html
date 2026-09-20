@@ -738,7 +738,8 @@
             'siga-vendas-loja': 'vendas_loja',
             'siga-conteudos': 'conteudos',
             'siga-produtos': 'produtos',
-            'siga-prospeccao': 'prospeccao_listas'
+            'siga-prospeccao': 'prospeccao_listas',
+            'siga-humor-registros': 'humor_registros'
         };
 
         const supabaseRetentionPolicy = {
@@ -766,15 +767,25 @@
             }
         }
 
+        function resolveStoreId(preferredStoreId = null, userId = null) {
+            const profileStoreId = getUsuarios().find(user => user.id === userId)?.lojaId;
+            const sessionStoreId = getSession()?.lojaId;
+            const directStoreId = [preferredStoreId, sessionStoreId, profileStoreId].find(isSupabaseUuid);
+            if (directStoreId) return directStoreId;
+            const validStores = getLojas().filter(store => isSupabaseUuid(store.id));
+            return validStores.length === 1 ? validStores[0].id : null;
+        }
+
         function databaseRowFromApp(table, item, scopedUserId = null) {
             const userId = item.userId || item.ownerId || scopedUserId || effectiveUserId();
-            const lojaId = [item.lojaId, getSession()?.lojaId, getUsuarios().find(user => user.id === userId)?.lojaId].find(isSupabaseUuid) || null;
+            const lojaId = resolveStoreId(item.lojaId, userId);
             if (table === 'tarefas') return { id: item.id, loja_id: lojaId, titulo: item.title, horario: item.time, owner: item.owner || 'user', responsavel_id: userId, concluida: item.completed, observacao: item.observation || '', data: item.date, serie_id: item.seriesId || null, dias_repeticao: item.repeatDays || null };
             if (table === 'vendas') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client || '', valor: item.value, data_hora: item.datetime || item.dateTime, produtos: item.products || [] };
             if (table === 'atendimentos') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client || '', resultado: item.outcome, resultado_label: item.outcomeLabel || '', valor: item.value || 0, telefone: item.phone || '', observacao: item.notes || '', produtos: item.products || [], produtos_apresentados: item.shownProducts || [], demanda: item.demand || '', venda_id: item.saleId || null, condicional_id: item.conditionalId || null, data_hora: item.datetime || item.dateTime };
             if (table === 'condicionais') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client, telefone: item.phone, observacao: item.observation || '', produtos: item.products || [], prazo: item.dueDate || null, status: item.status || 'aberta', task_id: item.taskId || null, created_at: item.createdAt };
             if (table === 'metas') return { id: item.id, loja_id: item.lojaId, vendedor_id: item.userId, semana_inicio: item.weekStart, semana_fim: item.weekEnd, bronze: item.bronze, prata: item.silver, ouro: item.gold, diamante: item.diamond, mes_referencia: `${item.month}-01`, mensal_bronze: item.monthlyBronze, mensal_prata: item.monthlySilver, mensal_ouro: item.monthlyGold, mensal_diamante: item.monthlyDiamond, meta_mensal: item.monthlyDiamond };
             if (table === 'conteudos') return { id: item.id, tipo: item.type, texto: item.text, humor: item.mood || null, ativo: item.active !== false };
+            if (table === 'humor_registros') return { loja_id: lojaId, vendedor_id: userId, data: item.date, humor: item.mood, updated_at: item.updatedAt || new Date().toISOString() };
             if (table === 'metas_mensais') return { id: item.id, loja_id: lojaId, mes_referencia: `${item.month}-01`, valor_total: item.total };
             if (table === 'metas_semanais') return { id: item.id, loja_id: lojaId, meta_mensal_id: item.monthlyGoalId, nome: item.name, semana_inicio: item.weekStart, semana_fim: item.weekEnd, valor_total: item.total, distribuicao: item.distributions || [] };
             if (table === 'vendas_loja') return { id: item.id, loja_id: item.lojaId || getSession()?.lojaId || null, descricao: item.client || '', valor: Number(item.value || 0), data: item.date };
@@ -790,6 +801,7 @@
             if (table === 'condicionais') return { ...row, userId: row.vendedor_id ?? row.userId, client: row.cliente ?? row.client, phone: row.telefone ?? row.phone, observation: row.observacao ?? row.observation ?? '', products: row.produtos ?? row.products ?? [], dueDate: row.prazo ?? row.dueDate, status: row.status ?? 'aberta', taskId: row.task_id ?? row.taskId, createdAt: row.created_at ?? row.createdAt };
             if (table === 'metas') return { ...row, lojaId: row.loja_id, userId: row.vendedor_id, weekStart: row.semana_inicio, weekEnd: row.semana_fim, bronze: Number(row.bronze || 0), silver: Number(row.prata || 0), gold: Number(row.ouro || 0), diamond: Number(row.diamante || 0), month: String(row.mes_referencia || '').slice(0, 7), monthlyBronze: Number(row.mensal_bronze ?? 0), monthlySilver: Number(row.mensal_prata ?? 0), monthlyGold: Number(row.mensal_ouro ?? 0), monthlyDiamond: Number(row.mensal_diamante ?? row.meta_mensal ?? 0), monthly: Number(row.mensal_diamante ?? row.meta_mensal ?? 0) };
             if (table === 'conteudos') return { ...row, type: row.tipo, text: row.texto, mood: row.humor || row.mood || '', active: row.ativo !== false };
+            if (table === 'humor_registros') return { ...row, userId: row.vendedor_id, date: row.data, mood: row.humor };
             if (table === 'metas_mensais') return { ...row, lojaId: row.loja_id, month: String(row.mes_referencia || '').slice(0, 7), total: Number(row.valor_total || 0) };
             if (table === 'metas_semanais') return { ...row, lojaId: row.loja_id, monthlyGoalId: row.meta_mensal_id, name: row.nome, weekStart: row.semana_inicio, weekEnd: row.semana_fim, total: Number(row.valor_total || 0), distributions: row.distribuicao || [] };
             if (table === 'vendas_loja') return { ...row, lojaId: row.loja_id, client: row.descricao, value: Number(row.valor || 0), date: row.data, datetime: `${row.data}T12:00:00`, storeSale: true };
@@ -905,8 +917,8 @@
                 showToast(`Sincronização pendente em ${table}: ${dependencyError.message}`, 'error');
                 return;
             }
-            const { error } = table === 'conteudos'
-                ? await sigaSupabase.from(table).upsert(rows, { onConflict: 'tipo,texto' })
+            const { error } = table === 'conteudos' || table === 'humor_registros'
+                ? await sigaSupabase.from(table).upsert(rows, { onConflict: table === 'conteudos' ? 'tipo,texto' : 'vendedor_id,data' })
                 : await sigaSupabase.from(table).upsert(rows);
             if (error) {
                 pendingSupabaseSyncs.set(storageKey, { ...pending, timer: null });
@@ -1006,6 +1018,7 @@
                 addRequest('metas', 'siga-metas', 'vendedor_id', userId);
                 addRequest('metas_mensais', 'siga-metas-mensais', 'loja_id', session.lojaId);
                 addRequest('metas_semanais', 'siga-metas-semanais', 'loja_id', session.lojaId);
+                addRequest('humor_registros', scopedKey('siga-humor-registros'), 'vendedor_id', userId);
                 addRequest('conteudos', 'siga-conteudos');
             }
             await Promise.all(requests.map(async ({ table, storageKey, column, value }) => {
@@ -1019,7 +1032,9 @@
                     else if (value) writeStoredList(`${storageKey}::${value}`, []);
                 }
                 const sanitizedList = table === 'lojas' ? list.filter(store => !isDemoStore(store)) : list;
-                if (table === 'lojas' || table === 'perfis' || table === 'prospeccao_listas' || table === 'conteudos') {
+                if (table === 'humor_registros') {
+                    writeStoredList(storageKey, Object.fromEntries(sanitizedList.map(item => [item.date, item.mood])));
+                } else if (table === 'lojas' || table === 'perfis' || table === 'prospeccao_listas' || table === 'conteudos') {
                     writeStoredList(storageKey, sanitizedList);
                 } else if (sanitizedList.length) {
                     const scopedTables = new Set(['tarefas', 'vendas', 'atendimentos', 'condicionais', 'vendas_loja']);
@@ -1389,7 +1404,15 @@
         }
 
         function getSession() {
-            try { return JSON.parse(localStorage.getItem(sessionStorageName)); } catch (error) { return null; }
+            try {
+                const session = JSON.parse(localStorage.getItem(sessionStorageName));
+                if (!session?.lojaId || isSupabaseUuid(session.lojaId)) return session;
+                const validStores = getLojas().filter(store => isSupabaseUuid(store.id));
+                if (validStores.length !== 1) return session;
+                const repairedSession = { ...session, lojaId: validStores[0].id };
+                localStorage.setItem(sessionStorageName, JSON.stringify(repairedSession));
+                return repairedSession;
+            } catch (error) { return null; }
         }
         function saveSession(session) { localStorage.setItem(sessionStorageName, JSON.stringify(session)); }
         function clearSession() { localStorage.removeItem(sessionStorageName); sigaSupabase.auth.signOut(); }
@@ -1500,7 +1523,7 @@
             const moodCard = document.getElementById('mood-card');
             if (!moodCard) return;
             const session = getSession();
-            const shouldHide = session?.type === 'user' && session.role === 'gerente';
+            const shouldHide = session?.type === 'user' && session.role === 'gerente' && !session.viewingUserId;
             moodCard.style.display = shouldHide ? 'none' : '';
         }
 
@@ -1509,7 +1532,7 @@
             appStarted = true;
             cleanupOldTasks();
             initTasks();
-            if (!(getSession()?.type === 'user' && getSession()?.role === 'gerente')) initMoodCard();
+            initMoodCard();
             bindManagerBar();
             renderGoalCard();
             renderDailyContent();
@@ -1523,7 +1546,8 @@
             cleanupOldTasks();
             showPage('dashboard');
             renderDashboardSales();
-            if (!(getSession()?.type === 'user' && getSession()?.role === 'gerente')) refreshMoodCard();
+            if (!moodCardInitialized && getSession()?.role === 'gerente' && getSession()?.viewingUserId) initMoodCard();
+            if (getSession()?.type !== 'user' || getSession()?.role !== 'gerente' || getSession()?.viewingUserId) refreshMoodCard();
             toggleMoodCardForSession();
             renderGoalCard();
             renderDailyContent();
@@ -1642,12 +1666,13 @@
         }
 
         function bindManagerBar() {
-            document.getElementById('manager-open-vendor-button').addEventListener('click', () => {
+            document.getElementById('manager-open-vendor-button').addEventListener('click', async () => {
                 const session = getSession();
                 const vendorId = document.getElementById('manager-vendor-select').value;
                 if (!vendorId) return;
                 session.viewingUserId = vendorId;
                 saveSession(session);
+                await hydrateFromSupabase();
                 location.hash = 'app';
             });
             document.getElementById('manager-overview-button').addEventListener('click', () => { location.hash = 'manager-overview'; });
@@ -3966,6 +3991,7 @@
             const records = getMoodRecords();
             records[dateKey] = moodId;
             localStorage.setItem(moodStorageKey(), JSON.stringify(records));
+            syncStoredList(moodStorageKey(), Object.entries(records).map(([date, mood]) => ({ userId: effectiveUserId(), date, mood, updatedAt: new Date().toISOString() })));
         }
 
         function getMood(moodId) {
@@ -3974,8 +4000,9 @@
 
         function renderMoodOptions(containerId = 'mood-options', required = false) {
             const optionsContainer = document.getElementById(containerId);
+            const readOnly = getSession()?.role === 'gerente';
             optionsContainer.innerHTML = moodOptions.map(mood => `
-                <button type="button" data-mood-id="${mood.id}" aria-label="${mood.label}" aria-pressed="${mood.id === selectedMoodId}"
+                <button type="button" data-mood-id="${mood.id}" aria-label="${mood.label}" aria-pressed="${mood.id === selectedMoodId}" ${readOnly ? 'disabled' : ''}
                     class="mood-option min-w-0 rounded-xl border px-1 py-2 text-center transition-all hover:-translate-y-0.5 ${mood.id === selectedMoodId ? 'border-indigo-200 bg-indigo-50' : 'border-slate-100 bg-slate-50'}">
                     <span class="block text-xl leading-6">${mood.emoji}</span>
                     <span class="mt-1 block truncate text-[9px] font-bold text-slate-500">${mood.label}</span>
@@ -3984,6 +4011,7 @@
 
             optionsContainer.querySelectorAll('.mood-option').forEach(button => {
                 button.addEventListener('click', () => {
+                    if (readOnly) return;
                     selectedMoodId = button.dataset.moodId;
                     saveMoodRecord(getLocalDateKey(), selectedMoodId);
                     renderMoodOptions();
@@ -4048,12 +4076,14 @@
             renderMoodCalendar();
         }
 
+        let moodCardInitialized = false;
+
         function initMoodCard() {
             const session = getSession();
             if (session?.type === 'user' && session.role === 'gerente') return;
             refreshMoodCard();
             renderMoodOptions('required-mood-options', true);
-            if (!getMoodRecords()[getLocalDateKey()]) openRequiredMood();
+            if (session?.role !== 'gerente' && !getMoodRecords()[getLocalDateKey()]) openRequiredMood();
 
             document.getElementById('toggle-mood-history').addEventListener('click', event => {
                 const history = document.getElementById('mood-history');
