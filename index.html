@@ -734,15 +734,15 @@
 
         function databaseRowFromApp(table, item, scopedUserId = null) {
             const userId = item.userId || item.ownerId || scopedUserId || effectiveUserId();
-            const lojaId = getSession()?.lojaId || getUsuarios().find(user => user.id === userId)?.lojaId || null;
+            const lojaId = item.lojaId || getSession()?.lojaId || getUsuarios().find(user => user.id === userId)?.lojaId || null;
             if (table === 'tarefas') return { id: item.id, loja_id: lojaId, titulo: item.title, horario: item.time, owner: item.owner || 'user', responsavel_id: userId, concluida: item.completed, observacao: item.observation || '', data: item.date, serie_id: item.seriesId || null, dias_repeticao: item.repeatDays || null };
             if (table === 'vendas') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client || '', valor: item.value, data_hora: item.datetime || item.dateTime, produtos: item.products || [] };
             if (table === 'atendimentos') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client || '', resultado: item.outcome, resultado_label: item.outcomeLabel || '', valor: item.value || 0, telefone: item.phone || '', observacao: item.notes || '', produtos: item.products || [], produtos_apresentados: item.shownProducts || [], demanda: item.demand || '', venda_id: item.saleId || null, condicional_id: item.conditionalId || null, data_hora: item.datetime || item.dateTime };
             if (table === 'condicionais') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client, telefone: item.phone, observacao: item.observation || '', produtos: item.products || [], prazo: item.dueDate || null, status: item.status || 'aberta', task_id: item.taskId || null, created_at: item.createdAt };
             if (table === 'metas') return { id: item.id, loja_id: item.lojaId, vendedor_id: item.userId, semana_inicio: item.weekStart, semana_fim: item.weekEnd, bronze: item.bronze, prata: item.silver, ouro: item.gold, diamante: item.diamond, mes_referencia: `${item.month}-01`, mensal_bronze: item.monthlyBronze, mensal_prata: item.monthlySilver, mensal_ouro: item.monthlyGold, mensal_diamante: item.monthlyDiamond, meta_mensal: item.monthlyDiamond };
             if (table === 'conteudos') return { id: item.id, tipo: item.type, texto: item.text, humor: item.mood || null, ativo: item.active !== false };
-            if (table === 'metas_mensais') return { id: item.id, loja_id: item.lojaId, mes_referencia: `${item.month}-01`, valor_total: item.total };
-            if (table === 'metas_semanais') return { id: item.id, loja_id: item.lojaId, meta_mensal_id: item.monthlyGoalId, nome: item.name, semana_inicio: item.weekStart, semana_fim: item.weekEnd, valor_total: item.total, distribuicao: item.distributions || [] };
+            if (table === 'metas_mensais') return { id: item.id, loja_id: lojaId, mes_referencia: `${item.month}-01`, valor_total: item.total };
+            if (table === 'metas_semanais') return { id: item.id, loja_id: lojaId, meta_mensal_id: item.monthlyGoalId, nome: item.name, semana_inicio: item.weekStart, semana_fim: item.weekEnd, valor_total: item.total, distribuicao: item.distributions || [] };
             if (table === 'vendas_loja') return { id: item.id, loja_id: item.lojaId || getSession()?.lojaId || null, descricao: item.client || '', valor: Number(item.value || 0), data: item.date };
             if (table === 'produtos') return { id: item.id, nome: item.name, aceita_genero: item.gender === true, ativo: item.active !== false };
             if (table === 'prospeccao_listas') return { id: item.id, loja_id: item.lojaId, nome: item.name, dias_disponiveis: item.days || [], contatos: item.contacts || [], mensagens: item.messages || [], created_at: item.createdAt, updated_at: item.updatedAt };
@@ -935,7 +935,7 @@
                 const monthlyIds = [...new Set(rows.map(row => row.meta_mensal_id).filter(Boolean))];
                 const monthlyGoals = getMonthlyGoals().filter(goal => monthlyIds.includes(goal.id));
                 if (monthlyGoals.length !== monthlyIds.length) return new Error('A meta mensal selecionada não foi encontrada. Recarregue a página e tente novamente.');
-                const { error } = await sigaSupabase.from('metas_mensais').upsert(monthlyGoals.map(goal => ({ id: goal.id, loja_id: goal.lojaId, mes_referencia: `${goal.month}-01`, valor_total: goal.total })));
+                const { error } = await sigaSupabase.from('metas_mensais').upsert(monthlyGoals.map(goal => databaseRowFromApp('metas_mensais', goal)));
                 if (error) return error;
             }
             return null;
