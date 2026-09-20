@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIGA - Dashboard</title>
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="manifest.webmanifest">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -227,6 +229,7 @@
             </div>
             <div class="flex items-center gap-3">
                 <span id="session-user-label" class="hidden text-[10px] font-black uppercase tracking-wider text-slate-400 sm:inline"></span>
+                <button type="button" id="install-app-button" class="hidden items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-2 text-[10px] font-black text-indigo-600 hover:bg-indigo-100" aria-label="Instalar aplicativo"><i data-lucide="download" class="h-3.5 w-3.5"></i><span class="hidden sm:inline">Instalar app</span></button>
                 <button type="button" id="app-logout" aria-label="Sair" class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-600"><i data-lucide="log-out" class="h-4 w-4"></i></button>
             </div>
         </div>
@@ -688,6 +691,37 @@
         const SUPABASE_URL = 'https://kqnfjtubsdxaatzfdlvf.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_DyoyiM0MvNNgsEmpsh7eWw_FHqfTshT';
         const sigaSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+        let deferredInstallPrompt = null;
+
+        function setupPwaInstall() {
+            const installButton = document.getElementById('install-app-button');
+            if (!installButton) return;
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            if (isStandalone) return;
+            window.addEventListener('beforeinstallprompt', event => {
+                event.preventDefault();
+                deferredInstallPrompt = event;
+                installButton.classList.remove('hidden');
+                installButton.classList.add('flex');
+                lucide.createIcons();
+            });
+            installButton.addEventListener('click', async () => {
+                if (!deferredInstallPrompt) return;
+                deferredInstallPrompt.prompt();
+                const { outcome } = await deferredInstallPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installButton.classList.add('hidden');
+                    installButton.classList.remove('flex');
+                }
+                deferredInstallPrompt = null;
+            });
+            window.addEventListener('appinstalled', () => {
+                deferredInstallPrompt = null;
+                installButton.classList.add('hidden');
+                installButton.classList.remove('flex');
+            });
+            if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(error => console.warn('Service worker indisponível:', error));
+        }
         const lojasStorageKey = 'siga-lojas';
         const usuariosStorageKey = 'siga-usuarios';
         const sessionStorageName = 'siga-sessao';
@@ -734,7 +768,7 @@
 
         function databaseRowFromApp(table, item, scopedUserId = null) {
             const userId = item.userId || item.ownerId || scopedUserId || effectiveUserId();
-            const lojaId = item.lojaId || getSession()?.lojaId || getUsuarios().find(user => user.id === userId)?.lojaId || null;
+            const lojaId = [item.lojaId, getSession()?.lojaId, getUsuarios().find(user => user.id === userId)?.lojaId].find(isSupabaseUuid) || null;
             if (table === 'tarefas') return { id: item.id, loja_id: lojaId, titulo: item.title, horario: item.time, owner: item.owner || 'user', responsavel_id: userId, concluida: item.completed, observacao: item.observation || '', data: item.date, serie_id: item.seriesId || null, dias_repeticao: item.repeatDays || null };
             if (table === 'vendas') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client || '', valor: item.value, data_hora: item.datetime || item.dateTime, produtos: item.products || [] };
             if (table === 'atendimentos') return { id: item.id, loja_id: getSession()?.lojaId || null, vendedor_id: userId, cliente: item.client || '', resultado: item.outcome, resultado_label: item.outcomeLabel || '', valor: item.value || 0, telefone: item.phone || '', observacao: item.notes || '', produtos: item.products || [], produtos_apresentados: item.shownProducts || [], demanda: item.demand || '', venda_id: item.saleId || null, condicional_id: item.conditionalId || null, data_hora: item.datetime || item.dateTime };
@@ -2699,6 +2733,7 @@
             purgeExpiredSupabaseRecords().catch(error => console.warn('Limpeza de retenção do Supabase indisponível:', error));
         }
         prepareNumericInputs();
+        setupPwaInstall();
         bindAuthForms();
         window.addEventListener('hashchange', applyRoute);
         document.addEventListener('visibilitychange', () => {
